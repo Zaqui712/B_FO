@@ -8,7 +8,7 @@ const receiverOrders = require('./routes/Communications/receiverOrders');
 app.use(express.json());
 
 // Use the route in your Express app
-app.use('/receiver-orders', receiverOrders); // Define base path for this route file
+app.use('/receive-encomenda', receiverOrders);  // Ensure this path matches the route in receiverOrders
 
 // Error handling middleware
 app.use((err, req, res, next) => {

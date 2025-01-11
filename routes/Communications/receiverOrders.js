@@ -1,7 +1,7 @@
 const express = require('express');
-const router = express.Router();  // Initializes the router to handle requests
-const sql = require('mssql');  // Required to interact with the SQL Server database
-const { getPool } = require('../../db');  // Assumed helper to get DB connection pool
+const router = express.Router();
+const sql = require('mssql');
+const { getPool } = require('../../db');
 
 // POST route for receiving encomenda
 router.post('/receive-encomenda', async (req, res) => {
@@ -18,13 +18,13 @@ router.post('/receive-encomenda', async (req, res) => {
 
   // Establish connection pool to the SQL database
   const pool = await getPool();  // Assuming `getPool` gives you a connection pool
-  const transaction = new sql.Transaction(pool);  // Create a transaction for atomic queries
+  const transaction = new sql.Transaction(pool);
 
   try {
     // Log that we are starting the transaction
     console.log('Starting database transaction...');
 
-    // Begin the transaction to ensure all queries are executed atomically
+    // Begin the transaction
     await transaction.begin();
 
     // Define the query for inserting an encomenda into the Encomenda table
@@ -45,25 +45,24 @@ router.post('/receive-encomenda', async (req, res) => {
       .input('quantidadeEnviada', sql.Int, encomenda.quantidadeEnviada || null)
       .query(insertEncomendaQuery);
 
-    const encomendaID = encomendaResult.recordset[0].encomendaID;  // Capture the inserted encomendaID
+    const encomendaID = encomendaResult.recordset[0].encomendaID;
 
     // Log the inserted encomenda ID
     console.log('Encomenda inserted with ID:', encomendaID);
 
-    // Check if there are any associated Medicamentos and insert them
+    // Process associated Medicamentos
     if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
       console.log('Processing medicamentos:', encomenda.medicamentos);
 
       for (const medicamento of encomenda.medicamentos) {
         const { medicamentoID, quantidade } = medicamento;
 
-        // Validate medicamento fields
         if (!medicamentoID || !quantidade) {
           console.log('Medicamento missing required fields:', medicamento);
           throw new Error('Medicamento ID and quantity are required for each medicamento');
         }
 
-        // Insert each medicamento into the Medicamento_Encomenda table
+        // Insert medicamento into Medicamento_Encomenda table
         const insertMedicamentoEncomendaQuery = `
           INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
           VALUES (@medicamentoID, @encomendaID)
@@ -72,7 +71,7 @@ router.post('/receive-encomenda', async (req, res) => {
           .input('medicamentoID', sql.Int, medicamentoID)
           .input('encomendaID', sql.Int, encomendaID)
           .query(insertMedicamentoEncomendaQuery);
-        
+
         // Log medicamento insertion
         console.log('Inserted medicamento into Medicamento_Encomenda:', medicamentoID);
       }
@@ -80,18 +79,17 @@ router.post('/receive-encomenda', async (req, res) => {
       console.log('No medicamentos to process.');
     }
 
-    // Commit the transaction once all queries are successful
+    // Commit the transaction
     await transaction.commit();
     console.log('Transaction committed successfully.');
 
     // Respond with success
     res.status(201).json({ message: 'Encomenda received and processed successfully', encomendaID });
   } catch (error) {
-    // Log error and rollback if any error occurs
     console.error('Error processing encomenda:', error.message);
     if (transaction) await transaction.rollback();
     res.status(500).json({ error: 'Error processing encomenda', details: error.message });
   }
 });
 
-module.exports = router;  // Export router so that it can be used in the main server file
+module.exports = router;
