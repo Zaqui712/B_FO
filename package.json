@@ -1,0 +1,23 @@
+{
+  "name": "b_fo",
+  "version": "1.0.0",
+  "main": "db.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zaqui712/B_FO.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Zaqui712/B_FO/issues"
+  },
+  "homepage": "https://github.com/Zaqui712/B_FO#readme",
+  "description": "",
+  "dependencies": {
+    "mssql": "^11.0.1"
+  }
+}
