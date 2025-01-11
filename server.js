@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const app = express();
 
@@ -8,7 +9,7 @@ const receiverOrders = require('./routes/Communications/receiverOrders');
 app.use(express.json());
 
 // Use the route in your Express app
-app.use('/receive-encomenda', receiverOrders);  // Ensure this path matches the route in receiverOrders
+app.use('/receive-encomenda', receiverOrders);  // Ensure this is the correct path
 
 // Error handling middleware
 app.use((err, req, res, next) => {
