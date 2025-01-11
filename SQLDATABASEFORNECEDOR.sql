@@ -19,7 +19,7 @@ CREATE TABLE Fornecedor (
 
 CREATE TABLE Estado (
     estadoID INT IDENTITY NOT NULL,
-    [Desc] VARCHAR(128) NULL,
+    [descricao] VARCHAR(128) NULL,
     PRIMARY KEY (estadoID)
 );
 
