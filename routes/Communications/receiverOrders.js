@@ -5,7 +5,7 @@ const sql = require('mssql');
 const { getPool } = require('../../db');  // Ensure correct path to db.js file
 
 // POST route for receiving encomenda
-router.post('/receive-encomenda', async (req, res) => {
+router.post('/', async (req, res) => {
   const encomenda = req.body.encomenda;
 
   // Log the incoming encomenda data for debugging
