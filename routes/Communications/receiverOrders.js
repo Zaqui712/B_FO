@@ -1,7 +1,8 @@
+// receiverOrders.js
 const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
-const { getPool } = require('../../db');
+const { getPool } = require('../../db');  // Ensure correct path to db.js file
 
 // POST route for receiving encomenda
 router.post('/receive-encomenda', async (req, res) => {

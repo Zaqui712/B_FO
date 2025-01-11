@@ -2,14 +2,14 @@
 const express = require('express');
 const app = express();
 
-// Import your route file
+// Import the receiverOrders route
 const receiverOrders = require('./routes/Communications/receiverOrders');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Use the route in your Express app
-app.use('/receive-encomenda', receiverOrders);  // Ensure this is the correct path
+// Use the route with correct base path
+app.use('/receive-encomenda', receiverOrders);  // This is correct, based on your setup
 
 // Error handling middleware
 app.use((err, req, res, next) => {
