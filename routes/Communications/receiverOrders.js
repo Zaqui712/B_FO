@@ -7,8 +7,12 @@ const { getPool } = require('../../db');  // Assumed helper to get DB connection
 router.post('/receive-encomenda', async (req, res) => {
   const encomenda = req.body.encomenda;
 
+  // Log the incoming encomenda data for debugging
+  console.log('Received encomenda:', encomenda);
+
   // Validate required fields in encomenda
   if (!encomenda || !encomenda.estadoID || !encomenda.fornecedorID) {
+    console.log('Missing required fields in encomenda');
     return res.status(400).json({ message: 'Missing required order fields' });
   }
 
@@ -17,6 +21,9 @@ router.post('/receive-encomenda', async (req, res) => {
   const transaction = new sql.Transaction(pool);  // Create a transaction for atomic queries
 
   try {
+    // Log that we are starting the transaction
+    console.log('Starting database transaction...');
+
     // Begin the transaction to ensure all queries are executed atomically
     await transaction.begin();
 
@@ -40,13 +47,19 @@ router.post('/receive-encomenda', async (req, res) => {
 
     const encomendaID = encomendaResult.recordset[0].encomendaID;  // Capture the inserted encomendaID
 
+    // Log the inserted encomenda ID
+    console.log('Encomenda inserted with ID:', encomendaID);
+
     // Check if there are any associated Medicamentos and insert them
     if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
+      console.log('Processing medicamentos:', encomenda.medicamentos);
+
       for (const medicamento of encomenda.medicamentos) {
         const { medicamentoID, quantidade } = medicamento;
 
         // Validate medicamento fields
         if (!medicamentoID || !quantidade) {
+          console.log('Medicamento missing required fields:', medicamento);
           throw new Error('Medicamento ID and quantity are required for each medicamento');
         }
 
@@ -59,11 +72,17 @@ router.post('/receive-encomenda', async (req, res) => {
           .input('medicamentoID', sql.Int, medicamentoID)
           .input('encomendaID', sql.Int, encomendaID)
           .query(insertMedicamentoEncomendaQuery);
+        
+        // Log medicamento insertion
+        console.log('Inserted medicamento into Medicamento_Encomenda:', medicamentoID);
       }
+    } else {
+      console.log('No medicamentos to process.');
     }
 
     // Commit the transaction once all queries are successful
     await transaction.commit();
+    console.log('Transaction committed successfully.');
 
     // Respond with success
     res.status(201).json({ message: 'Encomenda received and processed successfully', encomendaID });
