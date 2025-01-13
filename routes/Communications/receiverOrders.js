@@ -20,12 +20,10 @@ router.post('/', async (req, res) => {
 
       console.log(`[${new Date().toISOString()}] [Transaction ${transactionID}] Received encomenda:`, encomenda);
 
-      if (!encomenda.estadoID || !encomenda.fornecedorID || !encomenda.encomendaID) {
+      if (!encomenda.estadoID || !encomenda.fornecedorID) {
         console.log(`[Transaction ${transactionID}] Missing required fields in encomenda`);
         continue; // Skip to the next encomenda if required fields are missing
       }
-
-      const encomendaID = encomenda.encomendaID;
 
       let transaction;
 
@@ -37,25 +35,25 @@ router.post('/', async (req, res) => {
         await transaction.begin();
         console.log(`[Transaction ${transactionID}] Transaction started`);
 
-        // Check if the encomenda already exists based on the provided encomendaID and estadoID
+        // Check if the encomenda already exists based on the estadoID and fornecedorID (not encomendaID)
         const checkEncomendaQuery = `
           SELECT COUNT(*) AS existingOrderCount
           FROM Encomenda
-          WHERE encomendaID = @encomendaID AND estadoID = @estadoID
+          WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
         `;
-        console.log(`[Transaction ${transactionID}] Checking if encomenda with ID ${encomendaID} and estadoID ${encomenda.estadoID} already exists...`);
+        console.log(`[Transaction ${transactionID}] Checking if encomenda with estadoID ${encomenda.estadoID} and fornecedorID ${encomenda.fornecedorID} already exists...`);
 
         const existingOrderResult = await transaction.request()
-          .input('encomendaID', sql.Int, encomendaID)
           .input('estadoID', sql.Int, encomenda.estadoID)
+          .input('fornecedorID', sql.Int, encomenda.fornecedorID)
           .query(checkEncomendaQuery);
 
         const existingOrderCount = existingOrderResult.recordset[0].existingOrderCount;
-        console.log(`[Transaction ${transactionID}] Existing order count for encomendaID ${encomendaID} and estadoID ${encomenda.estadoID}: ${existingOrderCount}`);
+        console.log(`[Transaction ${transactionID}] Existing order count for estadoID ${encomenda.estadoID} and fornecedorID ${encomenda.fornecedorID}: ${existingOrderCount}`);
 
         // If the encomenda exists, update it; otherwise, insert it
         if (existingOrderCount > 0) {
-          console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} and estadoID ${encomenda.estadoID} already exists, updating it.`);
+          console.log(`[Transaction ${transactionID}] Encomenda with estadoID ${encomenda.estadoID} and fornecedorID ${encomenda.fornecedorID} already exists, updating it.`);
 
           const updateEncomendaQuery = `
             UPDATE Encomenda
@@ -68,12 +66,11 @@ router.post('/', async (req, res) => {
               dataEntrega = @dataEntrega,
               quantidadeEnviada = @quantidadeEnviada,
               adminID = @adminID
-            WHERE encomendaID = @encomendaID AND estadoID = @estadoID
+            WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
           `;
-          console.log(`[Transaction ${transactionID}] Updating encomenda with ID: ${encomendaID}...`);
+          console.log(`[Transaction ${transactionID}] Updating encomenda with estadoID: ${encomenda.estadoID} and fornecedorID: ${encomenda.fornecedorID}...`);
 
           await transaction.request()
-            .input('encomendaID', sql.Int, encomendaID)
             .input('estadoID', sql.Int, encomenda.estadoID)
             .input('fornecedorID', sql.Int, encomenda.fornecedorID)
             .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta || null)
@@ -84,27 +81,22 @@ router.post('/', async (req, res) => {
             .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
             .query(updateEncomendaQuery);
 
-          console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} updated successfully.`);
+          console.log(`[Transaction ${transactionID}] Encomenda updated successfully.`);
         } else {
-          // Insert encomenda into the Encomenda table using the provided encomendaID
+          // Insert encomenda into the Encomenda table without specifying encomendaID (let DB auto-generate it)
           const insertEncomendaQuery = `
-            SET IDENTITY_INSERT Encomenda ON;
-
             INSERT INTO Encomenda (
-              encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
+              estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
               dataEncomenda, dataEntrega, quantidadeEnviada, adminID
             )
             VALUES (
-              @encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
+              @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
               @dataEncomenda, @dataEntrega, @quantidadeEnviada, @adminID
             );
-
-            SET IDENTITY_INSERT Encomenda OFF;
           `;
-          console.log(`[Transaction ${transactionID}] Inserting encomenda with ID: ${encomendaID}...`);
+          console.log(`[Transaction ${transactionID}] Inserting encomenda with estadoID: ${encomenda.estadoID} and fornecedorID: ${encomenda.fornecedorID}...`);
 
           await transaction.request()
-            .input('encomendaID', sql.Int, encomendaID)
             .input('estadoID', sql.Int, encomenda.estadoID)
             .input('fornecedorID', sql.Int, encomenda.fornecedorID)
             .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta || null)
@@ -115,7 +107,7 @@ router.post('/', async (req, res) => {
             .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
             .query(insertEncomendaQuery);
 
-          console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} inserted successfully.`);
+          console.log(`[Transaction ${transactionID}] Encomenda inserted successfully.`);
         }
 
         // Process associated Medicamentos
@@ -131,14 +123,14 @@ router.post('/', async (req, res) => {
             }
 
             const insertMedicamentoEncomendaQuery = `
-              INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
+              INSERT INTO Medicamento_Encomenda (MedicamentoID, EncomendaID)
               VALUES (@medicamentoID, @encomendaID)
             `;
             
-            console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID} for encomenda ID: ${encomendaID}`);
+            console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID} for encomenda ID: ${encomenda.estadoID}`);
             await transaction.request()
               .input('medicamentoID', sql.Int, medicamentoID)
-              .input('encomendaID', sql.Int, encomendaID)
+              .input('encomendaID', sql.Int, encomendaID) // Automatically generated encomendaID
               .query(insertMedicamentoEncomendaQuery);
             console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
           }
