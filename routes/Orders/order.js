@@ -1,11 +1,11 @@
 const express = require('express');
-const cors = require('cors');  // Import cors
+const cors = require('cors');
 const router = express.Router();
-const { executeQuery } = require('../../db'); // Database connection pool
+const { executeQuery } = require('../../db'); // Import executeQuery from db.js
 
 // Enable CORS for all origins
 router.use(cors({
-  origin: '*',  // Allow all origins (you can restrict this to specific domains in production)
+  origin: '*',  // Allow all origins (restrict in production)
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type'],
 }));
@@ -33,11 +33,11 @@ router.get('/', async (req, res) => {
   `;
 
   try {
-    const results = await executeQuery(query);  // Execute query from db.js
-    res.status(200).json(results.recordset);  // Send the results as a JSON response
+    const results = await executeQuery(query);  // Execute the query using the executeQuery function
+    res.status(200).json(results.recordset);  // Return the results as JSON
   } catch (error) {
-    console.error('Error fetching orders:', error);  // Log full error object for debugging
-    res.status(500).json({ error: 'Query execution failed', details: error.message });
+    console.error('Error fetching orders:', error.message);  // Log the error message
+    res.status(500).json({ error: error.message });  // Return the error as JSON
   }
 });
 
