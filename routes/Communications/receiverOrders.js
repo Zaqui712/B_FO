@@ -5,7 +5,7 @@ const mssql = require('mssql'); // Assuming you're using mssql package
 const router = express.Router(); // Create a router instance
 
 // POST route for processing encomendas
-router.post('/process-encomendas', async (req, res) => {
+router.post('/', async (req, res) => {
   const encomendas = req.body.encomendas;
 
   try {
