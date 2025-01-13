@@ -1,8 +1,8 @@
 const express = require('express');
-const { getPool } = require('../../db');  // Import your database connection pool
+const { getPool } = require('../../db'); // Assuming this is your database pool
 const mssql = require('mssql'); // Assuming you're using mssql package
 
-const router = express.Router(); // Create a router instance
+const router = express.Router();
 
 // POST route for processing encomendas
 router.post('/', async (req, res) => {
@@ -13,21 +13,20 @@ router.post('/', async (req, res) => {
 
     // Loop through each encomenda and insert into the Encomenda table
     for (const encomenda of encomendas) {
-      // Insert into Encomenda table
+      // Insert into Encomenda table (excluding nomeFornecedor and profissionalNome)
       const encomendaResult = await pool.request()
         .input('estadoID', mssql.Int, encomenda.estadoID)
         .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
         .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
-        .input('nomeFornecedor', mssql.NVarChar, encomenda.nomeFornecedor)
-        .input('profissionalNome', mssql.NVarChar, encomenda.profissionalNome)
         .query(`
-          INSERT INTO Encomenda (estadoID, fornecedorID, quantidadeEnviada, nomeFornecedor, profissionalNome)
+          INSERT INTO Encomenda (estadoID, fornecedorID, quantidadeEnviada)
           OUTPUT INSERTED.encomendaID
-          VALUES (@estadoID, @fornecedorID, @quantidadeEnviada, @nomeFornecedor, @profissionalNome)
+          VALUES (@estadoID, @fornecedorID, @quantidadeEnviada)
         `);
+
       const encomendaID = encomendaResult.recordset[0].encomendaID;
 
-      // Loop through each medicamento in the encomenda and insert into the Medicamento_Encomenda table
+      // Loop through each medicamento in the encomenda and insert into Medicamento_Encomenda table
       for (const medicamento of encomenda.medicamentos) {
         // Insert into Medicamento_Encomenda relationship table
         await pool.request()
@@ -48,4 +47,4 @@ router.post('/', async (req, res) => {
   }
 });
 
-module.exports = router; // Export the route
+module.exports = router;
