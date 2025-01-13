@@ -84,7 +84,8 @@ router.post('/', async (req, res) => {
           console.log(`[Transaction ${transactionID}] Encomenda updated successfully.`);
         } else {
           // Insert encomenda into the Encomenda table without specifying encomendaID (let DB auto-generate it)
-          const insertEncomendaQuery = `
+          // If the encomenda doesn't exist, insert it into the database
+			const insertEncomendaQuery = `
 			  INSERT INTO Encomenda (
 				estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
 				dataEncomenda, dataEntrega, quantidadeEnviada, adminID
@@ -109,8 +110,10 @@ router.post('/', async (req, res) => {
 			  .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
 			  .query(insertEncomendaQuery);
 
+			// Ensure that the encomendaID is properly assigned
 			const encomendaID = result.recordset[0].encomendaID;
 			console.log(`[Transaction ${transactionID}] Encomenda inserted successfully with ID: ${encomendaID}`);
+
         }
 
         // Process associated Medicamentos
@@ -126,16 +129,15 @@ router.post('/', async (req, res) => {
             }
 
             const insertMedicamentoEncomendaQuery = `
-              INSERT INTO Medicamento_Encomenda (MedicamentoID, EncomendaID)
-              VALUES (@medicamentoID, @encomendaID)
-            `;
-            
-            console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID} for encomenda ID: ${encomenda.estadoID}`);
-            await transaction.request()
-              .input('medicamentoID', sql.Int, medicamentoID)
-              .input('encomendaID', sql.Int, encomendaID) // Automatically generated encomendaID
-              .query(insertMedicamentoEncomendaQuery);
-            console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
+			  INSERT INTO Medicamento_Encomenda (MedicamentoID, EncomendaID)
+			  VALUES (@medicamentoID, @encomendaID)
+			`;
+
+			console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID} for encomenda ID: ${encomendaID}`);
+			await transaction.request()
+			  .input('medicamentoID', sql.Int, medicamentoID)
+			  .input('encomendaID', sql.Int, encomendaID) // Use the correct encomendaID
+			  .query(insertMedicamentoEncomendaQuery);
           }
         } else {
           console.log(`[Transaction ${transactionID}] No medicamentos to process.`);
