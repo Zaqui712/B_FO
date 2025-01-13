@@ -74,34 +74,33 @@ router.post('/', async (req, res) => {
     const encomendaID = encomendaResult.recordset[0].encomendaID;
     console.log(`[Transaction ${transactionID}] Encomenda inserted with ID: ${encomendaID}`);
 
-    // Process associated Medicamentos
-    if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
-      console.log(`[Transaction ${transactionID}] Processing medicamentos:`, encomenda.medicamentos);
+    // Processing medicamentos without including quantity
+	if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
+	  console.log(`[Transaction ${transactionID}] Processing medicamentos:`, encomenda.medicamentos);
 
-      for (const medicamento of encomenda.medicamentos) {
-        const { medicamentoID, quantidade } = medicamento;
+	  for (const medicamento of encomenda.medicamentos) {
+		const { medicamentoID } = medicamento;
 
-        if (!medicamentoID || !quantidade) {
-          console.log(`[Transaction ${transactionID}] Medicamento missing required fields:`, medicamento);
-          throw new Error('Medicamento ID and quantity are required for each medicamento');
-        }
+		if (!medicamentoID) {
+		  console.log(`[Transaction ${transactionID}] Medicamento missing required fields:`, medicamento);
+		  throw new Error('Medicamento ID is required for each medicamento');
+		}
 
-        // Insert medicamento into Medicamento_Encomenda table
-        const insertMedicamentoEncomendaQuery = `
-          INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID, quantidade)
-          VALUES (@medicamentoID, @encomendaID, @quantidade)
-        `;
-        console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID}`);
-        await transaction.request()
-          .input('medicamentoID', sql.Int, medicamentoID)
-          .input('encomendaID', sql.Int, encomendaID)
-          .input('quantidade', sql.Int, quantidade)
-          .query(insertMedicamentoEncomendaQuery);
-        console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
-      }
-    } else {
-      console.log(`[Transaction ${transactionID}] No medicamentos to process.`);
-    }
+		// Insert into Medicamento_Encomenda table without quantity
+		const insertMedicamentoEncomendaQuery = `
+		  INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
+		  VALUES (@medicamentoID, @encomendaID)
+		`;
+		
+		console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID}`);
+		await transaction.request()
+		  .input('medicamentoID', sql.Int, medicamentoID)
+		  .input('encomendaID', sql.Int, encomendaID)
+		  .query(insertMedicamentoEncomendaQuery);
+		console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
+	  }
+	}
+
 
     // Commit the transaction
     await transaction.commit();
