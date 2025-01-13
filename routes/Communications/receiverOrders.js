@@ -12,31 +12,33 @@ router.post('/', async (req, res) => {
 
     // Loop through each encomenda and insert into the Encomenda table
     for (const encomenda of encomendas) {
-      // Check if the combination of estadoID and fornecedorID already exists in the Encomenda table
+      // Check if an Encomenda with the same estadoID and fornecedorID already exists
       const existingEncomenda = await pool.request()
         .input('estadoID', mssql.Int, encomenda.estadoID)
         .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
         .query(`
-          SELECT TOP 1 encomendaID 
-          FROM Encomenda 
+          SELECT COUNT(*) AS count
+          FROM Encomenda
           WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
         `);
 
-      // If the combination of estadoID and fornecedorID already exists, skip the insert or handle as needed
-      if (existingEncomenda.recordset.length > 0) {
+      if (existingEncomenda.recordset[0].count > 0) {
+        // If an Encomenda already exists, skip the insert (or handle as needed)
         console.log(`Encomenda with estadoID ${encomenda.estadoID} and fornecedorID ${encomenda.fornecedorID} already exists.`);
-        continue; // Skip this encomenda and move to the next
+        continue; // Or handle it as needed
       }
 
-      // Insert into Encomenda table (excluding nomeFornecedor and profissionalNome)
+      // Insert into Encomenda table if it doesn't already exist
+      // Check if encomendaID is provided, and if not, let the database generate it
       const encomendaResult = await pool.request()
+        .input('encomendaID', mssql.Int, encomenda.encomendaID || null)  // Accept encomendaID from body, or let it be null for auto generation
         .input('estadoID', mssql.Int, encomenda.estadoID)
         .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
         .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
         .query(`
-          INSERT INTO Encomenda (estadoID, fornecedorID, quantidadeEnviada)
+          INSERT INTO Encomenda (encomendaID, estadoID, fornecedorID, quantidadeEnviada)
           OUTPUT INSERTED.encomendaID
-          VALUES (@estadoID, @fornecedorID, @quantidadeEnviada)
+          VALUES (@encomendaID, @estadoID, @fornecedorID, @quantidadeEnviada)
         `);
 
       const encomendaID = encomendaResult.recordset[0].encomendaID;
