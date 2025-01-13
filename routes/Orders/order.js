@@ -14,21 +14,21 @@ router.use(cors({
 router.get('/', async (req, res) => {
   const query = `
     SELECT 
-    e.encomendaID,
-    e.dataEncomenda,
-    e.dataEntrega,
-    e.encomendaCompleta,
-    e.aprovadoPorAdministrador,
-    es.descricao AS estado,
-    f.nomeFornecedor,
-    f.contactoFornecedor,
-    m.nomeMedicamento,
-    e.quantidadeEnviada  -- This now correctly references the Encomenda table
+  e.encomendaID,
+  e.dataEncomenda,
+  e.dataEntrega,
+  e.encomendaCompleta,
+  e.aprovadoPorAdministrador,
+  es.descricao AS estado,
+  f.nomeFornecedor,
+  f.contactoFornecedor,
+  m.nomeMedicamento,
+  e.quantidadeEnviada
 FROM Encomenda e
-JOIN Estado es ON e.estadoID = es.estadoID
-JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
-JOIN Medicamento_Encomenda me ON e.encomendaID = me.EncomendaencomendaID
-JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
+LEFT JOIN Estado es ON e.estadoID = es.estadoID
+LEFT JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
+LEFT JOIN Medicamento_Encomenda me ON e.encomendaID = me.EncomendaencomendaID
+LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
 ORDER BY e.dataEncomenda DESC;
 
   `;
