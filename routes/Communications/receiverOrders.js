@@ -21,7 +21,7 @@ router.post('/', async (req, res) => {
   const encomendaID = encomenda.encomendaID; // Using the provided encomendaID
 
   // Establish connection pool to the SQL database
-  const pool = await getPool();  
+  const pool = await getPool();
   let transaction;
 
   try {
@@ -56,8 +56,14 @@ router.post('/', async (req, res) => {
 
     // Insert encomenda into the Encomenda table using the provided encomendaID
     const insertEncomendaQuery = `
+      SET IDENTITY_INSERT Encomenda ON;  -- Enable explicit value insertion for the identity column
+
       INSERT INTO Encomenda (encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
-      VALUES (@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada)
+      VALUES (@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada);
+
+      SET IDENTITY_INSERT Encomenda OFF;  -- Disable explicit value insertion for the identity column
+
+      SELECT SCOPE_IDENTITY() AS encomendaID;  -- Retrieve the generated encomendaID (if needed)
     `;
     console.log(`[Transaction ${transactionID}] Inserting encomenda with ID: ${encomendaID}...`);
 
@@ -86,7 +92,7 @@ router.post('/', async (req, res) => {
           throw new Error('Medicamento ID is required for each medicamento');
         }
 
-        // Insert medicamento into Medicamento_Encomenda table without quantidade field
+        // Insert medicamento into Medicamento_Encomenda table
         const insertMedicamentoEncomendaQuery = `
           INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
           VALUES (@medicamentoID, @encomendaID)
