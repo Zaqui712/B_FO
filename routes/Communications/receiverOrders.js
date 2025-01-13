@@ -85,29 +85,32 @@ router.post('/', async (req, res) => {
         } else {
           // Insert encomenda into the Encomenda table without specifying encomendaID (let DB auto-generate it)
           const insertEncomendaQuery = `
-            INSERT INTO Encomenda (
-              estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
-              dataEncomenda, dataEntrega, quantidadeEnviada, adminID
-            )
-            VALUES (
-              @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
-              @dataEncomenda, @dataEntrega, @quantidadeEnviada, @adminID
-            );
-          `;
-          console.log(`[Transaction ${transactionID}] Inserting encomenda with estadoID: ${encomenda.estadoID} and fornecedorID: ${encomenda.fornecedorID}...`);
+			  INSERT INTO Encomenda (
+				estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
+				dataEncomenda, dataEntrega, quantidadeEnviada, adminID
+			  )
+			  OUTPUT INSERTED.encomendaID
+			  VALUES (
+				@estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
+				@dataEncomenda, @dataEntrega, @quantidadeEnviada, @adminID
+			  );
+			`;
 
-          await transaction.request()
-            .input('estadoID', sql.Int, encomenda.estadoID)
-            .input('fornecedorID', sql.Int, encomenda.fornecedorID)
-            .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta || null)
-            .input('aprovadoPorAdministrador', sql.Bit, encomenda.aprovadoPorAdministrador || null)
-            .input('dataEncomenda', sql.Date, encomenda.dataEncomenda || null)
-            .input('dataEntrega', sql.Date, encomenda.dataEntrega || null)
-            .input('quantidadeEnviada', sql.Int, encomenda.quantidadeEnviada || null)
-            .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
-            .query(insertEncomendaQuery);
+			console.log(`[Transaction ${transactionID}] Inserting encomenda with estadoID: ${encomenda.estadoID} and fornecedorID: ${encomenda.fornecedorID}...`);
 
-          console.log(`[Transaction ${transactionID}] Encomenda inserted successfully.`);
+			const result = await transaction.request()
+			  .input('estadoID', sql.Int, encomenda.estadoID)
+			  .input('fornecedorID', sql.Int, encomenda.fornecedorID)
+			  .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta || null)
+			  .input('aprovadoPorAdministrador', sql.Bit, encomenda.aprovadoPorAdministrador || null)
+			  .input('dataEncomenda', sql.Date, encomenda.dataEncomenda || null)
+			  .input('dataEntrega', sql.Date, encomenda.dataEntrega || null)
+			  .input('quantidadeEnviada', sql.Int, encomenda.quantidadeEnviada || null)
+			  .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
+			  .query(insertEncomendaQuery);
+
+			const encomendaID = result.recordset[0].encomendaID;
+			console.log(`[Transaction ${transactionID}] Encomenda inserted successfully with ID: ${encomendaID}`);
         }
 
         // Process associated Medicamentos
