@@ -30,29 +30,35 @@ router.post('/', async (req, res) => {
 
       // Insert into Encomenda table if it doesn't already exist
       // Check if encomendaSHID is provided, and if not, let the database generate it
-			  const encomendaResult = await pool.request()
-		  .input('encomendaSHID', mssql.Int, encomenda.encomendaSHID || null)
-		  .input('estadoID', mssql.Int, encomenda.estadoID)
-		  .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
-		  .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
-		  .query(`
-			INSERT INTO Encomenda (encomendaSHID, estadoID, fornecedorID, quantidadeEnviada)
-			OUTPUT INSERTED.encomendaSHID
-			VALUES (@encomendaSHID, @estadoID, @fornecedorID, @quantidadeEnviada)
-		  `);
+      const encomendaResult = await pool.request()
+        .input('encomendaSHID', mssql.Int, encomenda.encomendaSHID || null)
+        .input('estadoID', mssql.Int, encomenda.estadoID)
+        .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
+        .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
+        .query(`
+          INSERT INTO Encomenda (encomendaSHID, estadoID, fornecedorID, quantidadeEnviada)
+          OUTPUT INSERTED.encomendaSHID
+          VALUES (@encomendaSHID, @estadoID, @fornecedorID, @quantidadeEnviada)
+        `);
 
       const encomendaSHID = encomendaResult.recordset[0].encomendaSHID;
+
+      // Check if encomendaSHID was returned correctly (not null)
+      if (!encomendaSHID) {
+        console.error('Failed to retrieve encomendaSHID');
+        continue; // Or handle this error case
+      }
 
       // Loop through each medicamento in the encomenda and insert into Medicamento_Encomenda table
       for (const medicamento of encomenda.medicamentos) {
         // Insert into Medicamento_Encomenda relationship table
         await pool.request()
-		  .input('medicamentoID', mssql.Int, medicamento.medicamentoID)
-		  .input('encomendaSHID', mssql.Int, encomendaSHID)  // Use encomendaSHID here
-		  .query(`
-			INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
-			VALUES (@medicamentoID, @encomendaSHID)
-		  `);
+          .input('medicamentoID', mssql.Int, medicamento.medicamentoID)
+          .input('encomendaSHID', mssql.Int, encomendaSHID)  // Use encomendaSHID here
+          .query(`
+            INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
+            VALUES (@medicamentoID, @encomendaSHID)
+          `);
       }
     }
 
