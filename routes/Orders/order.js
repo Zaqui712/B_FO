@@ -36,8 +36,8 @@ router.get('/', async (req, res) => {
     const results = await executeQuery(query);  // Execute query from db.js
     res.status(200).json(results.recordset);  // Send the results as a JSON response
   } catch (error) {
-    console.error('Error fetching orders:', error.message);
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching orders:', error);  // Log full error object for debugging
+    res.status(500).json({ error: 'Query execution failed', details: error.message });
   }
 });
 
