@@ -6,8 +6,8 @@ const app = express();
 const receiverOrders = require('./routes/Communications/receiverOrders');
 const senderOrders = require('./routes/Communications/senderOrders');
 
-const inventoryRouter = require('./routes/Stock');  // Adjust the path to your route
-const orderRouter = require('./routes/Orders');  // Adjust the path to your order route
+const inventoryRouter = require('./routes/Stock/stock');  // Adjust the path to your route
+const orderRouter = require('./routes/Orders/order');  // Adjust the path to your order route
 
 
 
