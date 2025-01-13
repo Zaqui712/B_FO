@@ -1,7 +1,6 @@
 const express = require('express');
 const { getPool } = require('../../db'); // Assuming this is your database pool
 const mssql = require('mssql'); // Assuming you're using mssql package
-
 const router = express.Router();
 
 // POST route for processing encomendas
