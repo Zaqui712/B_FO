@@ -28,6 +28,24 @@ router.post('/', async (req, res) => {
     // Begin the transaction
     await transaction.begin();
 
+    // Check if the encomenda already exists
+    const checkEncomendaQuery = `
+      SELECT COUNT(*) AS existingOrderCount
+      FROM Encomenda
+      WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
+    `;
+    const existingOrderResult = await transaction.request()
+      .input('estadoID', sql.Int, encomenda.estadoID)
+      .input('fornecedorID', sql.Int, encomenda.fornecedorID)
+      .query(checkEncomendaQuery);
+
+    const existingOrderCount = existingOrderResult.recordset[0].existingOrderCount;
+
+    if (existingOrderCount > 0) {
+      console.log('Encomenda already exists, discarding it.');
+      return res.status(409).json({ message: 'Encomenda already exists' });
+    }
+
     // Define the query for inserting an encomenda into the Encomenda table
     const insertEncomendaQuery = `
       INSERT INTO Encomenda (estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
