@@ -1,5 +1,5 @@
 const express = require('express');
-const axios = require('axios');  // Make sure axios is imported
+const axios = require('axios');  // Ensure axios is imported
 const router = express.Router();
 const sql = require('mssql');
 const { getPool } = require('../../db');  // Ensure correct path to db.js file
@@ -7,13 +7,14 @@ const { getPool } = require('../../db');  // Ensure correct path to db.js file
 // POST route for receiving encomenda
 router.post('/', async (req, res) => {
   const encomenda = req.body.encomenda;
+  const transactionID = Date.now(); // Unique identifier for this transaction
 
   // Log the incoming encomenda data for debugging
-  console.log('Received encomenda:', encomenda);
+  console.log(`[${new Date().toISOString()}] [Transaction ${transactionID}] Received encomenda:`, encomenda);
 
   // Validate required fields in encomenda
   if (!encomenda || !encomenda.estadoID || !encomenda.fornecedorID) {
-    console.log('Missing required fields in encomenda');
+    console.log(`[Transaction ${transactionID}] Missing required fields in encomenda`);
     return res.status(400).json({ message: 'Missing required order fields' });
   }
 
@@ -22,13 +23,12 @@ router.post('/', async (req, res) => {
   let transaction;
 
   try {
-    // Log that we are starting the transaction
-    console.log('Starting database transaction...');
+    console.log(`[Transaction ${transactionID}] Starting database transaction...`);
 
     // Begin the transaction
     transaction = new sql.Transaction(pool);
     await transaction.begin();
-    console.log('Transaction started');
+    console.log(`[Transaction ${transactionID}] Transaction started`);
 
     // Check if the encomenda already exists
     const checkEncomendaQuery = `
@@ -36,17 +36,20 @@ router.post('/', async (req, res) => {
       FROM Encomenda
       WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
     `;
+    console.log(`[Transaction ${transactionID}] Checking if encomenda already exists...`);
+
     const existingOrderResult = await transaction.request()
       .input('estadoID', sql.Int, encomenda.estadoID)
       .input('fornecedorID', sql.Int, encomenda.fornecedorID)
       .query(checkEncomendaQuery);
 
     const existingOrderCount = existingOrderResult.recordset[0].existingOrderCount;
+    console.log(`[Transaction ${transactionID}] Existing order count: ${existingOrderCount}`);
 
     if (existingOrderCount > 0) {
-      console.log('Encomenda already exists, discarding it.');
+      console.log(`[Transaction ${transactionID}] Encomenda already exists, discarding it.`);
       await transaction.rollback();
-      console.log('Transaction rolled back');
+      console.log(`[Transaction ${transactionID}] Transaction rolled back`);
       return res.status(409).json({ message: 'Encomenda already exists' });
     }
 
@@ -57,7 +60,7 @@ router.post('/', async (req, res) => {
       VALUES (@estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada)
     `;
 
-    // Execute the insert query for encomenda
+    console.log(`[Transaction ${transactionID}] Inserting encomenda...`);
     const encomendaResult = await transaction.request()
       .input('estadoID', sql.Int, encomenda.estadoID)
       .input('fornecedorID', sql.Int, encomenda.fornecedorID)
@@ -69,19 +72,17 @@ router.post('/', async (req, res) => {
       .query(insertEncomendaQuery);
 
     const encomendaID = encomendaResult.recordset[0].encomendaID;
-
-    // Log the inserted encomenda ID
-    console.log('Encomenda inserted with ID:', encomendaID);
+    console.log(`[Transaction ${transactionID}] Encomenda inserted with ID: ${encomendaID}`);
 
     // Process associated Medicamentos
     if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
-      console.log('Processing medicamentos:', encomenda.medicamentos);
+      console.log(`[Transaction ${transactionID}] Processing medicamentos:`, encomenda.medicamentos);
 
       for (const medicamento of encomenda.medicamentos) {
         const { medicamentoID, quantidade } = medicamento;
 
         if (!medicamentoID || !quantidade) {
-          console.log('Medicamento missing required fields:', medicamento);
+          console.log(`[Transaction ${transactionID}] Medicamento missing required fields:`, medicamento);
           throw new Error('Medicamento ID and quantity are required for each medicamento');
         }
 
@@ -90,29 +91,28 @@ router.post('/', async (req, res) => {
           INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
           VALUES (@medicamentoID, @encomendaID)
         `;
+        console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID}`);
         await transaction.request()
           .input('medicamentoID', sql.Int, medicamentoID)
           .input('encomendaID', sql.Int, encomendaID)
           .query(insertMedicamentoEncomendaQuery);
-
-        // Log medicamento insertion
-        console.log('Inserted medicamento into Medicamento_Encomenda:', medicamentoID);
+        console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
       }
     } else {
-      console.log('No medicamentos to process.');
+      console.log(`[Transaction ${transactionID}] No medicamentos to process.`);
     }
 
     // Commit the transaction
     await transaction.commit();
-    console.log('Transaction committed successfully.');
+    console.log(`[Transaction ${transactionID}] Transaction committed successfully.`);
 
     // Respond with success
     res.status(201).json({ message: 'Encomenda received and processed successfully', encomendaID });
   } catch (error) {
-    console.error('Error processing encomenda:', error.message);
+    console.error(`[Transaction ${transactionID}] Error processing encomenda:`, error.message);
     if (transaction) {
       await transaction.rollback();
-      console.log('Transaction rolled back due to error');
+      console.log(`[Transaction ${transactionID}] Transaction rolled back due to error`);
     }
     res.status(500).json({ error: 'Error processing encomenda', details: error.message });
   }
