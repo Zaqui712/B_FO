@@ -53,9 +53,38 @@ router.post('/', async (req, res) => {
         const existingOrderCount = existingOrderResult.recordset[0].existingOrderCount;
         console.log(`[Transaction ${transactionID}] Existing order count for encomendaID ${encomendaID} and estadoID ${encomenda.estadoID}: ${existingOrderCount}`);
 
-        // If the encomenda exists, skip inserting; otherwise, insert it
+        // If the encomenda exists, update it; otherwise, insert it
         if (existingOrderCount > 0) {
-          console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} and estadoID ${encomenda.estadoID} already exists, skipping insert.`);
+          console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} and estadoID ${encomenda.estadoID} already exists, updating it.`);
+
+          const updateEncomendaQuery = `
+            UPDATE Encomenda
+            SET
+              estadoID = @estadoID,
+              fornecedorID = @fornecedorID,
+              encomendaCompleta = @encomendaCompleta,
+              aprovadoPorAdministrador = @aprovadoPorAdministrador,
+              dataEncomenda = @dataEncomenda,
+              dataEntrega = @dataEntrega,
+              quantidadeEnviada = @quantidadeEnviada,
+              adminID = @adminID
+            WHERE encomendaID = @encomendaID AND estadoID = @estadoID
+          `;
+          console.log(`[Transaction ${transactionID}] Updating encomenda with ID: ${encomendaID}...`);
+
+          await transaction.request()
+            .input('encomendaID', sql.Int, encomendaID)
+            .input('estadoID', sql.Int, encomenda.estadoID)
+            .input('fornecedorID', sql.Int, encomenda.fornecedorID)
+            .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta || null)
+            .input('aprovadoPorAdministrador', sql.Bit, encomenda.aprovadoPorAdministrador || null)
+            .input('dataEncomenda', sql.Date, encomenda.dataEncomenda || null)
+            .input('dataEntrega', sql.Date, encomenda.dataEntrega || null)
+            .input('quantidadeEnviada', sql.Int, encomenda.quantidadeEnviada || null)
+            .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
+            .query(updateEncomendaQuery);
+
+          console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} updated successfully.`);
         } else {
           // Insert encomenda into the Encomenda table using the provided encomendaID
           const insertEncomendaQuery = `
