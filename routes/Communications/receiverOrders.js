@@ -62,15 +62,21 @@ router.post('/', async (req, res) => {
 
         // Insert encomenda into the Encomenda table using the provided encomendaID
         const insertEncomendaQuery = `
-          SET IDENTITY_INSERT Encomenda ON;
+		  SET IDENTITY_INSERT Encomenda ON;
 
-          INSERT INTO Encomenda (encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
-          VALUES (@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada);
+		  INSERT INTO Encomenda (
+			encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
+			dataEncomenda, dataEntrega, quantidadeEnviada, profissionalID, adminID,
+			adminNome, adminUltimoNome, nomeFornecedor, profissionalNome, profissionalUltimoNome, servicoNome
+		  )
+		  VALUES (
+			@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
+			@dataEncomenda, @dataEntrega, @quantidadeEnviada, @profissionalID, @adminID,
+			@adminNome, @adminUltimoNome, @nomeFornecedor, @profissionalNome, @profissionalUltimoNome, @servicoNome
+		  );
 
-          SET IDENTITY_INSERT Encomenda OFF;
-
-          SELECT SCOPE_IDENTITY() AS encomendaID;
-        `;
+		  SET IDENTITY_INSERT Encomenda OFF;
+		`;
         console.log(`[Transaction ${transactionID}] Inserting encomenda with ID: ${encomendaID}...`);
 
         await transaction.request()
@@ -99,9 +105,9 @@ router.post('/', async (req, res) => {
             }
 
             const insertMedicamentoEncomendaQuery = `
-              INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
-              VALUES (@medicamentoID, @encomendaID)
-            `;
+			  INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
+			  VALUES (@medicamentoID, @encomendaID)
+			`;
             
             console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID} for encomenda ID: ${encomendaID}`);
             await transaction.request()
