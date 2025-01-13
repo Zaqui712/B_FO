@@ -29,7 +29,6 @@ router.post('/', async (req, res) => {
       }
 
       // Insert into Encomenda table if it doesn't already exist
-      // Check if encomendaSHID is provided, and if not, let the database generate it
       const encomendaResult = await pool.request()
         .input('encomendaSHID', mssql.Int, encomenda.encomendaSHID || null)
         .input('estadoID', mssql.Int, encomenda.estadoID)
@@ -42,6 +41,9 @@ router.post('/', async (req, res) => {
         `);
 
       const encomendaSHID = encomendaResult.recordset[0].encomendaSHID;
+
+      // Log the encomendaSHID to ensure it's not null
+      console.log(`Inserted encomendaSHID: ${encomendaSHID}`);
 
       // Check if encomendaSHID was returned correctly (not null)
       if (!encomendaSHID) {
