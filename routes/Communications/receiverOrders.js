@@ -13,10 +13,12 @@ router.post('/', async (req, res) => {
   console.log(`[${new Date().toISOString()}] [Transaction ${transactionID}] Received encomenda:`, encomenda);
 
   // Validate required fields in encomenda
-  if (!encomenda || !encomenda.estadoID || !encomenda.fornecedorID) {
+  if (!encomenda || !encomenda.estadoID || !encomenda.fornecedorID || !encomenda.encomendaID) {
     console.log(`[Transaction ${transactionID}] Missing required fields in encomenda`);
     return res.status(400).json({ message: 'Missing required order fields' });
   }
+
+  const encomendaID = encomenda.encomendaID; // Using the provided encomendaID
 
   // Establish connection pool to the SQL database
   const pool = await getPool();  
@@ -30,38 +32,37 @@ router.post('/', async (req, res) => {
     await transaction.begin();
     console.log(`[Transaction ${transactionID}] Transaction started`);
 
-    // Check if the encomenda already exists
+    // Check if the encomenda already exists based on the provided encomendaID
     const checkEncomendaQuery = `
       SELECT COUNT(*) AS existingOrderCount
       FROM Encomenda
-      WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
+      WHERE encomendaID = @encomendaID
     `;
-    console.log(`[Transaction ${transactionID}] Checking if encomenda already exists...`);
+    console.log(`[Transaction ${transactionID}] Checking if encomenda with ID ${encomendaID} already exists...`);
 
     const existingOrderResult = await transaction.request()
-      .input('estadoID', sql.Int, encomenda.estadoID)
-      .input('fornecedorID', sql.Int, encomenda.fornecedorID)
+      .input('encomendaID', sql.Int, encomendaID)
       .query(checkEncomendaQuery);
 
     const existingOrderCount = existingOrderResult.recordset[0].existingOrderCount;
-    console.log(`[Transaction ${transactionID}] Existing order count: ${existingOrderCount}`);
+    console.log(`[Transaction ${transactionID}] Existing order count for encomendaID ${encomendaID}: ${existingOrderCount}`);
 
     if (existingOrderCount > 0) {
-      console.log(`[Transaction ${transactionID}] Encomenda already exists, discarding it.`);
+      console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} already exists, discarding it.`);
       await transaction.rollback();
       console.log(`[Transaction ${transactionID}] Transaction rolled back`);
       return res.status(409).json({ message: 'Encomenda already exists' });
     }
 
-    // Insert encomenda into the Encomenda table
+    // Insert encomenda into the Encomenda table using the provided encomendaID
     const insertEncomendaQuery = `
-      INSERT INTO Encomenda (estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
-      OUTPUT INSERTED.encomendaID
-      VALUES (@estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada)
+      INSERT INTO Encomenda (encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
+      VALUES (@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada)
     `;
-    console.log(`[Transaction ${transactionID}] Inserting encomenda...`);
+    console.log(`[Transaction ${transactionID}] Inserting encomenda with ID: ${encomendaID}...`);
 
-    const encomendaResult = await transaction.request()
+    await transaction.request()
+      .input('encomendaID', sql.Int, encomendaID)
       .input('estadoID', sql.Int, encomenda.estadoID)
       .input('fornecedorID', sql.Int, encomenda.fornecedorID)
       .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta || null)
@@ -71,36 +72,36 @@ router.post('/', async (req, res) => {
       .input('quantidadeEnviada', sql.Int, encomenda.quantidadeEnviada || null)
       .query(insertEncomendaQuery);
 
-    const encomendaID = encomendaResult.recordset[0].encomendaID;
-    console.log(`[Transaction ${transactionID}] Encomenda inserted with ID: ${encomendaID}`);
+    console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} inserted successfully.`);
 
-    // Processing medicamentos without including quantity
-	if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
-	  console.log(`[Transaction ${transactionID}] Processing medicamentos:`, encomenda.medicamentos);
+    // Process associated Medicamentos
+    if (encomenda.medicamentos && Array.isArray(encomenda.medicamentos)) {
+      console.log(`[Transaction ${transactionID}] Processing medicamentos:`, encomenda.medicamentos);
 
-	  for (const medicamento of encomenda.medicamentos) {
-		const { medicamentoID } = medicamento;
+      for (const medicamento of encomenda.medicamentos) {
+        const { medicamentoID } = medicamento;
 
-		if (!medicamentoID) {
-		  console.log(`[Transaction ${transactionID}] Medicamento missing required fields:`, medicamento);
-		  throw new Error('Medicamento ID is required for each medicamento');
-		}
+        if (!medicamentoID) {
+          console.log(`[Transaction ${transactionID}] Medicamento missing required fields:`, medicamento);
+          throw new Error('Medicamento ID is required for each medicamento');
+        }
 
-		// Insert into Medicamento_Encomenda table without quantity
-		const insertMedicamentoEncomendaQuery = `
-		  INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
-		  VALUES (@medicamentoID, @encomendaID)
-		`;
-		
-		console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID}`);
-		await transaction.request()
-		  .input('medicamentoID', sql.Int, medicamentoID)
-		  .input('encomendaID', sql.Int, encomendaID)
-		  .query(insertMedicamentoEncomendaQuery);
-		console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
-	  }
-	}
-
+        // Insert medicamento into Medicamento_Encomenda table without quantidade field
+        const insertMedicamentoEncomendaQuery = `
+          INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
+          VALUES (@medicamentoID, @encomendaID)
+        `;
+        
+        console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID} for encomenda ID: ${encomendaID}`);
+        await transaction.request()
+          .input('medicamentoID', sql.Int, medicamentoID)
+          .input('encomendaID', sql.Int, encomendaID)
+          .query(insertMedicamentoEncomendaQuery);
+        console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
+      }
+    } else {
+      console.log(`[Transaction ${transactionID}] No medicamentos to process.`);
+    }
 
     // Commit the transaction
     await transaction.commit();
