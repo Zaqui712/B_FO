@@ -41,9 +41,6 @@ router.post('/', async (req, res) => {
 			VALUES (@encomendaSHID, @estadoID, @fornecedorID, @quantidadeEnviada)
 		  `);
 
-		const encomendaSHID = encomendaResult.recordset[0].encomendaSHID;
-
-
       const encomendaSHID = encomendaResult.recordset[0].encomendaSHID;
 
       // Loop through each medicamento in the encomenda and insert into Medicamento_Encomenda table
