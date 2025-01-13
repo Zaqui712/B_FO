@@ -12,25 +12,24 @@ router.post('/', async (req, res) => {
 
     // Loop through each encomenda and insert into the Encomenda table
     for (const encomenda of encomendas) {
-      // Check if an Encomenda with the same estadoID and fornecedorID already exists
+      // Check if an Encomenda with the same encomendaSHID already exists
       const existingEncomenda = await pool.request()
-        .input('estadoID', mssql.Int, encomenda.estadoID)
-        .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
+        .input('encomendaSHID', mssql.Int, encomenda.encomendaID)  // Use encomendaID as encomendaSHID
         .query(`
           SELECT COUNT(*) AS count
           FROM Encomenda
-          WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
+          WHERE encomendaSHID = @encomendaSHID
         `);
 
       if (existingEncomenda.recordset[0].count > 0) {
-        // If an Encomenda already exists, skip the insert (or handle as needed)
-        console.log(`Encomenda with estadoID ${encomenda.estadoID} and fornecedorID ${encomenda.fornecedorID} already exists.`);
+        // If an Encomenda with the same encomendaSHID already exists, skip the insert (or handle as needed)
+        console.log(`Encomenda with encomendaSHID ${encomenda.encomendaID} already exists.`);
         continue; // Or handle it as needed
       }
 
       // Insert into Encomenda table if it doesn't already exist
       const encomendaResult = await pool.request()
-        .input('encomendaSHID', mssql.Int, encomenda.encomendaSHID || null)
+        .input('encomendaSHID', mssql.Int, encomenda.encomendaID) // Use encomendaID as encomendaSHID
         .input('estadoID', mssql.Int, encomenda.estadoID)
         .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
         .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
