@@ -29,29 +29,29 @@ router.post('/', async (req, res) => {
       }
 
       // Insert into Encomenda table if it doesn't already exist
-      // Check if encomendaID is provided, and if not, let the database generate it
+      // Check if encomendaSHID is provided, and if not, let the database generate it
       const encomendaResult = await pool.request()
-        .input('encomendaID', mssql.Int, encomenda.encomendaID || null)  // Accept encomendaID from body, or let it be null for auto generation
+        .input('encomendaSHID', mssql.Int, encomenda.encomendaSHID || null)  // Accept encomendaSHID from body, or let it be null for auto generation
         .input('estadoID', mssql.Int, encomenda.estadoID)
         .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
         .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
         .query(`
-          INSERT INTO Encomenda (encomendaID, estadoID, fornecedorID, quantidadeEnviada)
-          OUTPUT INSERTED.encomendaID
-          VALUES (@encomendaID, @estadoID, @fornecedorID, @quantidadeEnviada)
+          INSERT INTO Encomenda (encomendaSHID, estadoID, fornecedorID, quantidadeEnviada)
+          OUTPUT INSERTED.encomendaSHID
+          VALUES (@encomendaSHID, @estadoID, @fornecedorID, @quantidadeEnviada)
         `);
 
-      const encomendaID = encomendaResult.recordset[0].encomendaID;
+      const encomendaSHID = encomendaResult.recordset[0].encomendaSHID;
 
       // Loop through each medicamento in the encomenda and insert into Medicamento_Encomenda table
       for (const medicamento of encomenda.medicamentos) {
         // Insert into Medicamento_Encomenda relationship table
         await pool.request()
           .input('medicamentoID', mssql.Int, medicamento.medicamentoID)
-          .input('encomendaID', mssql.Int, encomendaID)
+          .input('encomendaSHID', mssql.Int, encomendaSHID)  // Use encomendaSHID here
           .query(`
             INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
-            VALUES (@medicamentoID, @encomendaID)
+            VALUES (@medicamentoID, @encomendaSHID)
           `);
       }
     }
