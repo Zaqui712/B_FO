@@ -61,20 +61,17 @@ router.post('/', async (req, res) => {
         }
 
         // Insert encomenda into the Encomenda table using the provided encomendaID
-        const insertEncomendaQuery = `
+       const insertEncomendaQuery = `
 		  SET IDENTITY_INSERT Encomenda ON;
 
-					  INSERT INTO Encomenda (
-			  encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
-			  dataEncomenda, dataEntrega, quantidadeEnviada, profissionalID, adminID,
-			  adminNome, adminUltimoNome, nomeFornecedor, profissionalNome, profissionalUltimoNome, servicoNome
-			)
-			VALUES (
-			  @encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
-			  @dataEncomenda, @dataEntrega, @quantidadeEnviada, @profissionalID, @adminID,
-			  @adminNome, @adminUltimoNome, @nomeFornecedor, @profissionalNome, @profissionalUltimoNome, @servicoNome
-			);
-
+		  INSERT INTO Encomenda (
+			encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador,
+			dataEncomenda, dataEntrega, quantidadeEnviada, adminID
+		  )
+		  VALUES (
+			@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador,
+			@dataEncomenda, @dataEntrega, @quantidadeEnviada, @adminID
+		  );
 
 		  SET IDENTITY_INSERT Encomenda OFF;
 		`;
@@ -89,15 +86,9 @@ router.post('/', async (req, res) => {
 		  .input('dataEncomenda', sql.Date, encomenda.dataEncomenda || null)
 		  .input('dataEntrega', sql.Date, encomenda.dataEntrega || null)
 		  .input('quantidadeEnviada', sql.Int, encomenda.quantidadeEnviada || null)
-		  .input('profissionalID', sql.Int, encomenda.profissionalID)  // Add this line
-		  .input('adminID', sql.Int, encomenda.adminID || null)         // Optional: Pass the adminID if available
-		  .input('adminNome', sql.NVarChar, encomenda.adminNome || null)
-		  .input('adminUltimoNome', sql.NVarChar, encomenda.adminUltimoNome || null)
-		  .input('nomeFornecedor', sql.NVarChar, encomenda.nomeFornecedor)
-		  .input('profissionalNome', sql.NVarChar, encomenda.profissionalNome)
-		  .input('profissionalUltimoNome', sql.NVarChar, encomenda.profissionalUltimoNome || null)
-		  .input('servicoNome', sql.NVarChar, encomenda.servicoNome || null)
+		  .input('adminID', sql.Int, encomenda.adminID || null) // Optional field
 		  .query(insertEncomendaQuery);
+
 
         console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} inserted successfully.`);
 
