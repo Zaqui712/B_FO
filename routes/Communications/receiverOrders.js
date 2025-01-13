@@ -12,6 +12,22 @@ router.post('/', async (req, res) => {
 
     // Loop through each encomenda and insert into the Encomenda table
     for (const encomenda of encomendas) {
+      // Check if the combination of estadoID and fornecedorID already exists in the Encomenda table
+      const existingEncomenda = await pool.request()
+        .input('estadoID', mssql.Int, encomenda.estadoID)
+        .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
+        .query(`
+          SELECT TOP 1 encomendaID 
+          FROM Encomenda 
+          WHERE estadoID = @estadoID AND fornecedorID = @fornecedorID
+        `);
+
+      // If the combination of estadoID and fornecedorID already exists, skip the insert or handle as needed
+      if (existingEncomenda.recordset.length > 0) {
+        console.log(`Encomenda with estadoID ${encomenda.estadoID} and fornecedorID ${encomenda.fornecedorID} already exists.`);
+        continue; // Skip this encomenda and move to the next
+      }
+
       // Insert into Encomenda table (excluding nomeFornecedor and profissionalNome)
       const encomendaResult = await pool.request()
         .input('estadoID', mssql.Int, encomenda.estadoID)
