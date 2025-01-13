@@ -1,5 +1,5 @@
 const express = require('express');
-const axios = require('axios');  // Ensure axios is imported
+const axios = require('axios');  // Ensure axios is imported for potential future use
 const router = express.Router();
 const sql = require('mssql');
 const { getPool } = require('../../db');  // Ensure correct path to db.js file
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
   }
 
   // Establish connection pool to the SQL database
-  const pool = await getPool();  // Assuming `getPool` gives you a connection pool
+  const pool = await getPool();  
   let transaction;
 
   try {
@@ -53,14 +53,14 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ message: 'Encomenda already exists' });
     }
 
-    // Define the query for inserting an encomenda into the Encomenda table
+    // Insert encomenda into the Encomenda table
     const insertEncomendaQuery = `
       INSERT INTO Encomenda (estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
       OUTPUT INSERTED.encomendaID
       VALUES (@estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada)
     `;
-
     console.log(`[Transaction ${transactionID}] Inserting encomenda...`);
+
     const encomendaResult = await transaction.request()
       .input('estadoID', sql.Int, encomenda.estadoID)
       .input('fornecedorID', sql.Int, encomenda.fornecedorID)
@@ -88,13 +88,14 @@ router.post('/', async (req, res) => {
 
         // Insert medicamento into Medicamento_Encomenda table
         const insertMedicamentoEncomendaQuery = `
-          INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
-          VALUES (@medicamentoID, @encomendaID)
+          INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID, quantidade)
+          VALUES (@medicamentoID, @encomendaID, @quantidade)
         `;
         console.log(`[Transaction ${transactionID}] Inserting medicamento ID: ${medicamentoID}`);
         await transaction.request()
           .input('medicamentoID', sql.Int, medicamentoID)
           .input('encomendaID', sql.Int, encomendaID)
+          .input('quantidade', sql.Int, quantidade)
           .query(insertMedicamentoEncomendaQuery);
         console.log(`[Transaction ${transactionID}] Inserted medicamento ID: ${medicamentoID}`);
       }
