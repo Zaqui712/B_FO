@@ -1,5 +1,5 @@
-// receiverOrders.js
 const express = require('express');
+const axios = require('axios');  // Make sure axios is imported
 const router = express.Router();
 const sql = require('mssql');
 const { getPool } = require('../../db');  // Ensure correct path to db.js file
@@ -19,14 +19,16 @@ router.post('/', async (req, res) => {
 
   // Establish connection pool to the SQL database
   const pool = await getPool();  // Assuming `getPool` gives you a connection pool
-  const transaction = new sql.Transaction(pool);
+  let transaction;
 
   try {
     // Log that we are starting the transaction
     console.log('Starting database transaction...');
 
     // Begin the transaction
+    transaction = new sql.Transaction(pool);
     await transaction.begin();
+    console.log('Transaction started');
 
     // Check if the encomenda already exists
     const checkEncomendaQuery = `
@@ -43,6 +45,8 @@ router.post('/', async (req, res) => {
 
     if (existingOrderCount > 0) {
       console.log('Encomenda already exists, discarding it.');
+      await transaction.rollback();
+      console.log('Transaction rolled back');
       return res.status(409).json({ message: 'Encomenda already exists' });
     }
 
@@ -106,7 +110,10 @@ router.post('/', async (req, res) => {
     res.status(201).json({ message: 'Encomenda received and processed successfully', encomendaID });
   } catch (error) {
     console.error('Error processing encomenda:', error.message);
-    if (transaction) await transaction.rollback();
+    if (transaction) {
+      await transaction.rollback();
+      console.log('Transaction rolled back due to error');
+    }
     res.status(500).json({ error: 'Error processing encomenda', details: error.message });
   }
 });
