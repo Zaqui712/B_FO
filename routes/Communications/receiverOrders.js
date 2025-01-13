@@ -1,24 +1,22 @@
 const express = require('express');
-const axios = require('axios');  // Ensure axios is imported for potential future use
+const axios = require('axios');
 const router = express.Router();
 const sql = require('mssql');
-const { getPool } = require('../../db');  // Ensure correct path to db.js file
+const { getPool } = require('../../db');
 
 // POST route for receiving encomenda
 router.post('/', async (req, res) => {
   const encomenda = req.body.encomenda;
   const transactionID = Date.now(); // Unique identifier for this transaction
 
-  // Log the incoming encomenda data for debugging
   console.log(`[${new Date().toISOString()}] [Transaction ${transactionID}] Received encomenda:`, encomenda);
 
-  // Validate required fields in encomenda
   if (!encomenda || !encomenda.estadoID || !encomenda.fornecedorID || !encomenda.encomendaID) {
     console.log(`[Transaction ${transactionID}] Missing required fields in encomenda`);
     return res.status(400).json({ message: 'Missing required order fields' });
   }
 
-  const encomendaID = encomenda.encomendaID; // Using the provided encomendaID
+  const encomendaID = encomenda.encomendaID;
 
   // Establish connection pool to the SQL database
   const pool = await getPool();
@@ -32,23 +30,24 @@ router.post('/', async (req, res) => {
     await transaction.begin();
     console.log(`[Transaction ${transactionID}] Transaction started`);
 
-    // Check if the encomenda already exists based on the provided encomendaID
+    // Check if the encomenda already exists based on the provided encomendaID and estadoID
     const checkEncomendaQuery = `
       SELECT COUNT(*) AS existingOrderCount
       FROM Encomenda
-      WHERE encomendaID = @encomendaID
+      WHERE encomendaID = @encomendaID AND estadoID = @estadoID
     `;
-    console.log(`[Transaction ${transactionID}] Checking if encomenda with ID ${encomendaID} already exists...`);
+    console.log(`[Transaction ${transactionID}] Checking if encomenda with ID ${encomendaID} and estadoID ${encomenda.estadoID} already exists...`);
 
     const existingOrderResult = await transaction.request()
       .input('encomendaID', sql.Int, encomendaID)
+      .input('estadoID', sql.Int, encomenda.estadoID)
       .query(checkEncomendaQuery);
 
     const existingOrderCount = existingOrderResult.recordset[0].existingOrderCount;
-    console.log(`[Transaction ${transactionID}] Existing order count for encomendaID ${encomendaID}: ${existingOrderCount}`);
+    console.log(`[Transaction ${transactionID}] Existing order count for encomendaID ${encomendaID} and estadoID ${encomenda.estadoID}: ${existingOrderCount}`);
 
     if (existingOrderCount > 0) {
-      console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} already exists, discarding it.`);
+      console.log(`[Transaction ${transactionID}] Encomenda with ID ${encomendaID} and estadoID ${encomenda.estadoID} already exists, discarding it.`);
       await transaction.rollback();
       console.log(`[Transaction ${transactionID}] Transaction rolled back`);
       return res.status(409).json({ message: 'Encomenda already exists' });
@@ -56,14 +55,14 @@ router.post('/', async (req, res) => {
 
     // Insert encomenda into the Encomenda table using the provided encomendaID
     const insertEncomendaQuery = `
-      SET IDENTITY_INSERT Encomenda ON;  -- Enable explicit value insertion for the identity column
+      SET IDENTITY_INSERT Encomenda ON;
 
       INSERT INTO Encomenda (encomendaID, estadoID, fornecedorID, encomendaCompleta, aprovadoPorAdministrador, dataEncomenda, dataEntrega, quantidadeEnviada)
       VALUES (@encomendaID, @estadoID, @fornecedorID, @encomendaCompleta, @aprovadoPorAdministrador, @dataEncomenda, @dataEntrega, @quantidadeEnviada);
 
-      SET IDENTITY_INSERT Encomenda OFF;  -- Disable explicit value insertion for the identity column
+      SET IDENTITY_INSERT Encomenda OFF;
 
-      SELECT SCOPE_IDENTITY() AS encomendaID;  -- Retrieve the generated encomendaID (if needed)
+      SELECT SCOPE_IDENTITY() AS encomendaID;
     `;
     console.log(`[Transaction ${transactionID}] Inserting encomenda with ID: ${encomendaID}...`);
 
@@ -92,7 +91,6 @@ router.post('/', async (req, res) => {
           throw new Error('Medicamento ID is required for each medicamento');
         }
 
-        // Insert medicamento into Medicamento_Encomenda table
         const insertMedicamentoEncomendaQuery = `
           INSERT INTO Medicamento_Encomenda (MedicamentomedicamentoID, EncomendaencomendaID)
           VALUES (@medicamentoID, @encomendaID)
