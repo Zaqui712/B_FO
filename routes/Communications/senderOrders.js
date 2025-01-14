@@ -40,12 +40,12 @@ router.put('/', async (req, res) => {
     await transaction.begin();
 
     // Update encomenda query - only updating encomendaCompleta and dataEntrega
-    const updateEncomendaQuery = 
+    const updateEncomendaQuery = `
       UPDATE Encomenda
       SET encomendaCompleta = @encomendaCompleta, 
           dataEntrega = @dataEntrega
       WHERE encomendaID = @encomendaID
-    ;
+    `;
 
     // Execute update query
     await transaction.request()
@@ -63,26 +63,26 @@ router.put('/', async (req, res) => {
 
     // Prepare data for external backend
     const encomendaToSend = {
-	  encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
-	  dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
-	  encomendaCompleta: encomenda.encomendaCompleta,
-	};
-	
+      encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
+      dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
+      encomendaCompleta: encomenda.encomendaCompleta,
+    };
+    
     delete encomendaToSend.encomendaID;  // Optional: Remove original encomendaID to avoid confusion
 
     // Send encomenda data to external backend
     try {
-	  const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
-	  console.log('Encomenda sent to external backend:', response.data);
-	} catch (error) {
-	  console.error('Error sending encomenda to external backend:', error.message);
-	  // Log the response details for debugging
-	  if (error.response) {
-		console.error('Response from external backend:', error.response.data);
-		console.error('Status code:', error.response.status);
-	  }
-	}
-	
+      const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
+      console.log('Encomenda sent to external backend:', response.data);
+    } catch (error) {
+      console.error('Error sending encomenda to external backend:', error.message);
+      // Log the response details for debugging
+      if (error.response) {
+        console.error('Response from external backend:', error.response.data);
+        console.error('Status code:', error.response.status);
+      }
+    }
+    
     // Success response
     res.status(200).json({ message: 'Encomenda updated and sent successfully', encomendaID: encomenda.encomendaID });
   } catch (error) {
@@ -102,11 +102,11 @@ router.put('/auto', async (req, res) => {
     try {
       // Query for all incomplete encomendas (encomendaCompleta = 0)
       const pool = await getPool();
-      const query = 
+      const query = `
         SELECT * FROM Encomenda
         WHERE encomendaCompleta = 0  -- Only select incomplete orders
         ORDER BY dataEncomenda
-      ;
+      `;
 
       const result = await pool.request().query(query);
       const encomendas = result.recordset;
@@ -116,7 +116,7 @@ router.put('/auto', async (req, res) => {
         return;
       }
 
-      console.log(Found ${encomendas.length} encomendas to send);
+      console.log(`Found ${encomendas.length} encomendas to send`);
 
       for (const encomenda of encomendas) {
         console.log('Automatically sending encomenda:', encomenda.encomendaID);
@@ -144,11 +144,11 @@ router.put('/auto', async (req, res) => {
         // Optionally update the status of the encomenda as completed after sending
         await pool.request()
           .input('encomendaID', sql.Int, encomenda.encomendaID)
-          .query(
+          .query(`
             UPDATE Encomenda
             SET encomendaCompleta = 1  -- Mark the order as completed after sending
             WHERE encomendaID = @encomendaID
-          );
+          `);
       }
 
     } catch (error) {
