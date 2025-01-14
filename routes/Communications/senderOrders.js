@@ -156,12 +156,12 @@ async function updateEncomendaFields(encomenda, transaction) {
   // Log the incoming encomenda to verify the values
   console.log('Updating encomenda with data:', encomenda);
 
-  // Prepare the update query using encomendaID as the condition
+  // Prepare the update query using encomendaSHID as the condition
   const updateEncomendaQuery = `
     UPDATE Encomenda
     SET encomendaCompleta = @encomendaCompleta, 
         dataEntrega = @dataEntrega
-    WHERE encomendaID = @encomendaID
+    WHERE encomendaSHID = @encomendaSHID
   `;
 
   // Log the query for debugging
@@ -171,7 +171,7 @@ async function updateEncomendaFields(encomenda, transaction) {
     const result = await transaction.request()
       .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta)
       .input('dataEntrega', sql.Date, encomenda.dataEntrega)
-      .input('encomendaID', sql.Int, encomenda.encomendaID)  // Use encomendaID here
+      .input('encomendaSHID', sql.Int, encomenda.encomendaID)  // Use encomendaID to map to encomendaSHID
       .query(updateEncomendaQuery);
 
     // Log result of the query execution
@@ -184,5 +184,6 @@ async function updateEncomendaFields(encomenda, transaction) {
     throw error;
   }
 }
+
 
 module.exports = router;  // No app.listen() here
