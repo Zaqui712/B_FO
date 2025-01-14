@@ -14,7 +14,7 @@ router.use(cors({
 router.get('/all', async (req, res) => {
   const query = `
     SELECT 
-    e.encomendaID,
+    e.encomendaSHID AS OrderSHID,
     e.dataEncomenda,
     e.dataEntrega,
     e.encomendaCompleta,
@@ -23,7 +23,7 @@ router.get('/all', async (req, res) => {
     f.nomeFornecedor,
     f.contactoFornecedor,
     m.nomeMedicamento,
-    me.EncomendaencomendaID AS quantidadeEnviada
+    e.quantidadeEnviada
 	FROM Encomenda e
 	LEFT JOIN Estado es ON e.estadoID = es.estadoID
 	LEFT JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
