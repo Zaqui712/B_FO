@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const sql = require('mssql');
-const axios = require('axios');  // Make sure axios is imported
-const { getPool } = require('../../db');  // Ensure correct path to db.js file
+const axios = require('axios');
+const { getPool } = require('../../db'); // Ensure correct path to db.js file
 
 // PUT route for sending encomenda
 router.put('/', async (req, res) => {
@@ -70,5 +70,74 @@ router.put('/', async (req, res) => {
     res.status(500).json({ error: 'Error updating encomenda', details: error.message });
   }
 });
+/*
+// Order Automatically Sent (every 2 minutes) - Modified to send all orders with adjusted dataEntrega
+router.put('/auto', async (req, res) => {
+  console.log('Starting automatic order sending every 2 minutes');
+
+  // Execute this process every 2 minutes
+  setInterval(async () => {
+    try {
+      // Query for all incomplete encomendas (encomendaCompleta = 0)
+      const pool = await getPool();
+      const query = `
+        SELECT * FROM Encomenda
+        WHERE encomendaCompleta = 0  -- Adjust condition as needed
+        ORDER BY dataEncomenda
+      `;
+
+      const result = await pool.request().query(query);
+      const encomendas = result.recordset;
+
+      if (encomendas.length === 0) {
+        console.log('No encomendas found to send automatically');
+        return;
+      }
+
+      console.log(`Found ${encomendas.length} encomendas to send`);
+
+      for (const encomenda of encomendas) {
+        console.log('Automatically sending encomenda:', encomenda.encomendaID);
+
+        // Adjust dataEntrega to be 2 days later
+        const dataEntrega = new Date(encomenda.dataEntrega);
+        dataEntrega.setDate(dataEntrega.getDate() + 2);  // Add 2 days
+
+        // Prepare the data to send
+        const encomendaToSend = {
+          ...encomenda,
+          encomendaSHID: encomenda.encomendaID,  // Rename for external backend
+          dataEntrega: dataEntrega.toISOString().split('T')[0]  // Format the date in YYYY-MM-DD format
+        };
+        delete encomendaToSend.encomendaID;
+
+        // Send the encomenda data to the external backend
+        try {
+          const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
+          console.log('Encomenda sent to external backend:', response.data);
+        } catch (error) {
+          console.error('Error sending encomenda to external backend:', error.message);
+        }
+
+        // Optionally update the status of the encomenda as completed after sending
+        await pool.request()
+          .input('encomendaID', sql.Int, encomenda.encomendaID)
+          .query(`
+            UPDATE Encomenda
+            SET encomendaCompleta = 1  -- Mark the order as completed after sending
+            WHERE encomendaID = @encomendaID
+          `);
+      }
+
+    } catch (error) {
+      console.error('Error in automatic order sending:', error.message);
+    }
+  }, 120000);  // 120000 ms = 2 minutes
+
+  // Respond immediately to indicate the process is running
+  res.status(200).json({ message: 'Auto-order sending started' });
+});
+*/
 
 module.exports = router;
+
