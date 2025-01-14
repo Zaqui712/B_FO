@@ -1,8 +1,14 @@
 const express = require('express');
+
+const cors = require('cors');  // Import cors
 const router = express.Router();
 const sql = require('mssql');
 const axios = require('axios');
 const { getPool } = require('../../db'); // Ensure correct path to db.js file
+
+// Enable CORS for all origins (you can restrict it to specific origins later if needed)
+const app = express();
+app.use(cors());
 
 // PUT route for sending encomenda
 router.put('/', async (req, res) => {
@@ -70,6 +76,7 @@ router.put('/', async (req, res) => {
     res.status(500).json({ error: 'Error updating encomenda', details: error.message });
   }
 });
+
 /*
 // Order Automatically Sent (every 2 minutes) - Modified to send only incomplete encomendas
 router.put('/auto', async (req, res) => {
