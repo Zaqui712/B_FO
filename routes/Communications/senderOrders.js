@@ -71,7 +71,7 @@ router.put('/', async (req, res) => {
   }
 });
 /*
-// Order Automatically Sent (every 2 minutes) - Modified to send all orders with adjusted dataEntrega
+// Order Automatically Sent (every 2 minutes) - Modified to send only incomplete encomendas
 router.put('/auto', async (req, res) => {
   console.log('Starting automatic order sending every 2 minutes');
 
@@ -82,7 +82,7 @@ router.put('/auto', async (req, res) => {
       const pool = await getPool();
       const query = `
         SELECT * FROM Encomenda
-        WHERE encomendaCompleta = 0  -- Adjust condition as needed
+        WHERE encomendaCompleta = 0  -- Only select incomplete orders
         ORDER BY dataEncomenda
       `;
 
@@ -137,6 +137,7 @@ router.put('/auto', async (req, res) => {
   // Respond immediately to indicate the process is running
   res.status(200).json({ message: 'Auto-order sending started' });
 });
+
 */
 
 module.exports = router;
