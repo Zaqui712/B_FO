@@ -93,6 +93,7 @@ router.put('/', async (req, res) => {
   }
 });
 
+
 /*
 // Order Automatically Sent (every 2 minutes) - Modified to send only incomplete encomendas
 router.put('/auto', async (req, res) => {
