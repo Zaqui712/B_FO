@@ -14,22 +14,22 @@ router.use(cors({
 router.get('/all', async (req, res) => {
   const query = `
     SELECT 
-  e.encomendaSHID AS OrderSHID,
-  e.dataEncomenda,
-  e.dataEntrega,
-  e.encomendaCompleta,
-  e.aprovadoPorAdministrador,
-  es.estadoID AS estadoID,  -- Include estadoID here without descricao
-  f.nomeFornecedor,
-  f.contactoFornecedor,
-  m.nomeMedicamento,
-  e.quantidadeEnviada
-	FROM Encomenda e
-	LEFT JOIN Estado es ON e.estadoID = es.estadoID
-	LEFT JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
-	LEFT JOIN Medicamento_Encomenda me ON e.encomendaID = me.EncomendaencomendaID
-	LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
-	ORDER BY e.dataEncomenda DESC;
+      e.encomendaSHID AS OrderSHID,
+      e.dataEncomenda,
+      e.dataEntrega,
+      e.encomendaCompleta,
+      e.aprovadoPorAdministrador,
+      es.estadoID AS estadoID,  -- Include estadoID here without descricao
+      f.nomeFornecedor,
+      f.contactoFornecedor,
+      m.nomeMedicamento,
+      e.quantidadeEnviada
+    FROM Encomenda e
+    LEFT JOIN Estado es ON e.estadoID = es.estadoID
+    LEFT JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
+    LEFT JOIN Medicamento_Encomenda me ON e.encomendaID = me.EncomendaencomendaID
+    LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
+    ORDER BY e.dataEncomenda DESC;
   `;
 
   try {
