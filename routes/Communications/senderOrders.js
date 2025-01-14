@@ -39,29 +39,10 @@ router.put('/', async (req, res) => {
 
     await transaction.begin();
 
-    const updateEncomendaQuery = `
-	  UPDATE Encomenda
-	  SET encomendaCompleta = @encomendaCompleta, 
-		  dataEntrega = @dataEntrega
-	  WHERE encomendaSHID = @encomendaSHID
-	`;
-	console.log('Executing SQL query:', updateEncomendaQuery);
-	console.log('Parameters:', {
-	  encomendaCompleta: encomenda.encomendaCompleta,
-	  dataEntrega: encomenda.dataEntrega,
-	  encomendaSHID: encomenda.encomendaSHID
-	});
+    // Call the helper function to update the fields
+    await updateEncomendaFields(encomenda, transaction);
 
-
-	// Execute update query
-	await transaction.request()
-	  .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta)
-	  .input('dataEntrega', sql.Date, encomenda.dataEntrega)  // Use dataEntrega here
-	  .input('encomendaSHID', sql.Int, encomenda.encomendaSHID)
-	  .query(updateEncomendaQuery);
-
-	console.log('Encomenda updated locally:', encomenda.encomendaSHID);
-
+    console.log('Encomenda updated locally:', encomenda.encomendaSHID);
 
     // Commit the transaction
     await transaction.commit();
@@ -70,26 +51,26 @@ router.put('/', async (req, res) => {
 
     // Prepare data for external backend
     const encomendaToSend = {
-	  encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
-	  dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
-	  encomendaCompleta: encomenda.encomendaCompleta,
-	};
-	
+      encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
+      dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
+      encomendaCompleta: encomenda.encomendaCompleta,
+    };
+
     delete encomendaToSend.encomendaID;  // Optional: Remove original encomendaID to avoid confusion
 
     // Send encomenda data to external backend
     try {
-	  const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
-	  console.log('Encomenda sent to external backend:', response.data);
-	} catch (error) {
-	  console.error('Error sending encomenda to external backend:', error.message);
-	  // Log the response details for debugging
-	  if (error.response) {
-		console.error('Response from external backend:', error.response.data);
-		console.error('Status code:', error.response.status);
-	  }
-	}
-	
+      const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
+      console.log('Encomenda sent to external backend:', response.data);
+    } catch (error) {
+      console.error('Error sending encomenda to external backend:', error.message);
+      // Log the response details for debugging
+      if (error.response) {
+        console.error('Response from external backend:', error.response.data);
+        console.error('Status code:', error.response.status);
+      }
+    }
+
     // Success response
     res.status(200).json({ message: 'Encomenda updated and sent successfully', encomendaID: encomenda.encomendaID });
   } catch (error) {
@@ -98,6 +79,7 @@ router.put('/', async (req, res) => {
     res.status(500).json({ error: 'Error updating encomenda', details: error.message });
   }
 });
+
 
 /*
 // Order Automatically Sent (every 2 minutes) - Modified to send only incomplete encomendas
@@ -168,5 +150,21 @@ router.put('/auto', async (req, res) => {
 });
 
 */
+
+// Function to update encomenda dataEntrega and encomendaCompleta
+async function updateEncomendaFields(encomenda, transaction) {
+  const updateEncomendaQuery = `
+    UPDATE Encomenda
+    SET encomendaCompleta = @encomendaCompleta, 
+        dataEntrega = @dataEntrega
+    WHERE encomendaSHID = @encomendaSHID
+  `;
+
+  return await transaction.request()
+    .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta)
+    .input('dataEntrega', sql.Date, encomenda.dataEntrega)
+    .input('encomendaSHID', sql.Int, encomenda.encomendaSHID)
+    .query(updateEncomendaQuery);
+}
 
 module.exports = router;  // No app.listen() here
