@@ -55,6 +55,7 @@ router.get('/all', async (req, res) => {
     // Map medicamentoResults by EncomendaencomendaID for easier lookup
     const medicamentoMap = medicamentoResults.recordset.reduce((acc, item) => {
       if (!acc[item.EncomendaencomendaID]) {
+        acc[item.EncomendaencomendaID] = []; // Ensure the entry is an array
       }
       acc[item.EncomendaencomendaID].push({
         MedicamentomedicamentoID: item.MedicamentomedicamentoID,
@@ -65,7 +66,7 @@ router.get('/all', async (req, res) => {
     
     // Combine orderResults with corresponding medicamentos
     const combinedResults = orderResults.recordset.map(order => {
-      const medicamentos = medicamentoMap[order.OrderSHID] || [];
+      const medicamentos = medicamentoMap[order.OrderSHID] || []; // Default to empty array if no medicamentos
       return {
         ...order,
         medicamentos: medicamentos
