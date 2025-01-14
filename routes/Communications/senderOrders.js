@@ -39,13 +39,19 @@ router.put('/', async (req, res) => {
 
     await transaction.begin();
 
-    // Update encomenda query - only updating encomendaCompleta and dataEntrega
-	const updateEncomendaQuery = `
+    const updateEncomendaQuery = `
 	  UPDATE Encomenda
 	  SET encomendaCompleta = @encomendaCompleta, 
 		  dataEntrega = @dataEntrega
 	  WHERE encomendaSHID = @encomendaSHID
 	`;
+	console.log('Executing SQL query:', updateEncomendaQuery);
+	console.log('Parameters:', {
+	  encomendaCompleta: encomenda.encomendaCompleta,
+	  dataEntrega: encomenda.dataEntrega,
+	  encomendaSHID: encomenda.encomendaSHID
+	});
+
 
 	// Execute update query
 	await transaction.request()
