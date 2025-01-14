@@ -39,22 +39,33 @@ router.put('/', async (req, res) => {
 
     await transaction.begin();
 
-    // Update encomenda query - only updating encomendaCompleta and dataEntrega
-    const updateEncomendaQuery = `
+    // Update encomendaCompleta
+    const updateEncomendaCompletaQuery = `
       UPDATE Encomenda
-      SET encomendaCompleta = @encomendaCompleta, 
-          dataEntrega = @dataEntrega
+      SET encomendaCompleta = @encomendaCompleta
       WHERE encomendaID = @encomendaID
     `;
 
-    // Execute update query
     await transaction.request()
       .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta)
-      .input('dataEntrega', sql.Date, encomenda.dataEntrega)  // Use dataEntrega here
       .input('encomendaID', sql.Int, encomenda.encomendaID)
-      .query(updateEncomendaQuery);
+      .query(updateEncomendaCompletaQuery);
 
-    console.log('Encomenda updated locally:', encomenda.encomendaID);
+    console.log('encomendaCompleta updated locally:', encomenda.encomendaID);
+
+    // Update dataEntrega
+    const updateDataEntregaQuery = `
+      UPDATE Encomenda
+      SET dataEntrega = @dataEntrega
+      WHERE encomendaID = @encomendaID
+    `;
+
+    await transaction.request()
+      .input('dataEntrega', sql.Date, encomenda.dataEntrega)
+      .input('encomendaID', sql.Int, encomenda.encomendaID)
+      .query(updateDataEntregaQuery);
+
+    console.log('dataEntrega updated locally:', encomenda.encomendaID);
 
     // Commit the transaction
     await transaction.commit();
@@ -63,12 +74,10 @@ router.put('/', async (req, res) => {
 
     // Prepare data for external backend
     const encomendaToSend = {
-      encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
-      dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
+      encomendaSHID: encomenda.encomendaID,
+      dataEntrega: encomenda.dataEntrega,
       encomendaCompleta: encomenda.encomendaCompleta,
     };
-    
-    delete encomendaToSend.encomendaID;  // Optional: Remove original encomendaID to avoid confusion
 
     // Send encomenda data to external backend
     try {
@@ -76,13 +85,12 @@ router.put('/', async (req, res) => {
       console.log('Encomenda sent to external backend:', response.data);
     } catch (error) {
       console.error('Error sending encomenda to external backend:', error.message);
-      // Log the response details for debugging
       if (error.response) {
         console.error('Response from external backend:', error.response.data);
         console.error('Status code:', error.response.status);
       }
     }
-    
+
     // Success response
     res.status(200).json({ message: 'Encomenda updated and sent successfully', encomendaID: encomenda.encomendaID });
   } catch (error) {
