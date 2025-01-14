@@ -1,5 +1,4 @@
 const express = require('express');
-
 const cors = require('cors');  // Import cors
 const router = express.Router();
 const sql = require('mssql');
@@ -8,7 +7,13 @@ const { getPool } = require('../../db'); // Ensure correct path to db.js file
 
 // Enable CORS for all origins (you can restrict it to specific origins later if needed)
 const app = express();
-app.use(cors());
+
+// Use CORS middleware before defining the routes
+app.use(cors({
+  origin: '*', // Allow all origins (for testing, can be restricted for production)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type']
+}));
 
 // PUT route for sending encomenda
 router.put('/', async (req, res) => {
