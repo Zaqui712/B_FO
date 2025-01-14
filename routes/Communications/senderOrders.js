@@ -155,14 +155,4 @@ router.put('/auto', async (req, res) => {
 
 */
 
-// Export the router to be used in the main app
-module.exports = router;
-
-// If you're using this in a larger app, make sure to import and use the router in your app
-app.use('/send-encomenda', router);
-
-// Listen on a port (usually at the bottom of the file)
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+module.exports = router;  // No app.listen() here
