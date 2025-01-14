@@ -33,10 +33,12 @@ router.post('/', async (req, res) => {
         .input('estadoID', mssql.Int, encomenda.estadoID)
         .input('fornecedorID', mssql.Int, encomenda.fornecedorID)
         .input('quantidadeEnviada', mssql.Int, encomenda.quantidadeEnviada)
+        .input('dataEncomenda', mssql.DateTime, encomenda.dataEncomenda) // Add this line
+        .input('dataEntrega', mssql.DateTime, encomenda.dataEntrega) // Add this line
         .query(`
-          INSERT INTO Encomenda (encomendaSHID, estadoID, fornecedorID, quantidadeEnviada)
+          INSERT INTO Encomenda (encomendaSHID, estadoID, fornecedorID, quantidadeEnviada, dataEncomenda, dataEntrega)
           OUTPUT INSERTED.encomendaSHID
-          VALUES (@encomendaSHID, @estadoID, @fornecedorID, @quantidadeEnviada)
+          VALUES (@encomendaSHID, @estadoID, @fornecedorID, @quantidadeEnviada, @dataEncomenda, @dataEntrega)
         `);
 
       const encomendaSHID = encomendaResult.recordset[0].encomendaSHID;
