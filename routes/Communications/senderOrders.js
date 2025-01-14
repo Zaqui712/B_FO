@@ -38,23 +38,25 @@ router.put('/', async (req, res) => {
     console.log('Starting database transaction...');
 
     await transaction.begin();
+	// Ensure the value of encomendaCompleta is passed as a boolean (1 for true, 0 for false)
+	const encomendaCompletaValue = encomenda.encomendaCompleta ? 1 : 0;  // Use 1 for true and 0 for false
 
     // Update encomenda query - only updating encomendaCompleta and dataEntrega
-    const updateEncomendaQuery = `
-      UPDATE Encomenda
-      SET encomendaCompleta = @encomendaCompleta, 
-          dataEntrega = @dataEntrega
-      WHERE encomendaID = @encomendaID
-    `;
+	const updateEncomendaQuery = `
+	  UPDATE Encomenda
+	  SET encomendaCompleta = @encomendaCompleta, 
+		  dataEntrega = @dataEntrega
+	  WHERE encomendaID = @encomendaID
+	`;
 
     // Execute update query
     await transaction.request()
-      .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta)
-      .input('dataEntrega', sql.Date, encomenda.dataEntrega)  // Use dataEntrega here
-      .input('encomendaID', sql.Int, encomenda.encomendaID)
-      .query(updateEncomendaQuery);
+	  .input('encomendaCompleta', sql.Bit, encomendaCompletaValue)  // Ensure Bit type
+	  .input('dataEntrega', sql.Date, encomenda.dataEntrega)  // Use dataEntrega here
+	  .input('encomendaID', sql.Int, encomenda.encomendaID)  // Correct encomendaID type
+	  .query(updateEncomendaQuery);
 
-    console.log('Encomenda updated locally:', encomenda.encomendaID);
+	console.log('Encomenda updated locally:', encomenda.encomendaID);
 
     // Commit the transaction
     await transaction.commit();
