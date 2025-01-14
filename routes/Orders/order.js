@@ -52,11 +52,25 @@ router.get('/all', async (req, res) => {
       executeQuery(medicamentoQuery)  // Second query: Medicamento details
     ]);
     
-    // Combine both results into one object
-    const combinedResults = {
-      orders: orderResults.recordset,
-      medicamentos: medicamentoResults.recordset
-    };
+    // Map medicamentoResults by EncomendaencomendaID for easier lookup
+    const medicamentoMap = medicamentoResults.recordset.reduce((acc, item) => {
+      if (!acc[item.EncomendaencomendaID]) {
+      }
+      acc[item.EncomendaencomendaID].push({
+        MedicamentomedicamentoID: item.MedicamentomedicamentoID,
+        nomeMedicamento: item.nomeMedicamento
+      });
+      return acc;
+    }, {});
+    
+    // Combine orderResults with corresponding medicamentos
+    const combinedResults = orderResults.recordset.map(order => {
+      const medicamentos = medicamentoMap[order.OrderSHID] || [];
+      return {
+        ...order,
+        medicamentos: medicamentos
+      };
+    });
     
     // Send combined results as a JSON response
     res.status(200).json(combinedResults);  
