@@ -63,19 +63,26 @@ router.put('/', async (req, res) => {
 
     // Prepare data for external backend
     const encomendaToSend = {
-      ...encomenda,
-      encomendaSHID: encomenda.encomendaID  // Rename to encomendaSHID for the external backend
-    };
+	  encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
+	  dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
+	  encomendaCompleta: encomenda.encomendaCompleta,
+	};
+	
     delete encomendaToSend.encomendaID;  // Optional: Remove original encomendaID to avoid confusion
 
     // Send encomenda data to external backend
     try {
-      const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
-      console.log('Encomenda sent to external backend:', response.data);
-    } catch (error) {
-      console.error('Error sending encomenda to external backend:', error.message);
-    }
-
+	  const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
+	  console.log('Encomenda sent to external backend:', response.data);
+	} catch (error) {
+	  console.error('Error sending encomenda to external backend:', error.message);
+	  // Log the response details for debugging
+	  if (error.response) {
+		console.error('Response from external backend:', error.response.data);
+		console.error('Status code:', error.response.status);
+	  }
+	}
+	
     // Success response
     res.status(200).json({ message: 'Encomenda updated and sent successfully', encomendaID: encomenda.encomendaID });
   } catch (error) {
