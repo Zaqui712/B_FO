@@ -11,26 +11,25 @@ router.use(cors({
 }));
 
 // READ - Route to check all orders and their details
-router.get('/', async (req, res) => {
+router.get('/all', async (req, res) => {
   const query = `
     SELECT 
-  e.encomendaID,
-  e.dataEncomenda,
-  e.dataEntrega,
-  e.encomendaCompleta,
-  e.aprovadoPorAdministrador,
-  es.descricao AS estado,
-  f.nomeFornecedor,
-  f.contactoFornecedor,
-  m.nomeMedicamento,
-  e.quantidadeEnviada
-FROM Encomenda e
-LEFT JOIN Estado es ON e.estadoID = es.estadoID
-LEFT JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
-LEFT JOIN Medicamento_Encomenda me ON e.encomendaID = me.EncomendaencomendaID
-LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
-ORDER BY e.dataEncomenda DESC;
-
+    e.encomendaID,
+    e.dataEncomenda,
+    e.dataEntrega,
+    e.encomendaCompleta,
+    e.aprovadoPorAdministrador,
+    es.descricao AS estado,
+    f.nomeFornecedor,
+    f.contactoFornecedor,
+    m.nomeMedicamento,
+    me.EncomendaencomendaID AS quantidadeEnviada
+	FROM Encomenda e
+	LEFT JOIN Estado es ON e.estadoID = es.estadoID
+	LEFT JOIN Fornecedor f ON e.fornecedorID = f.fornecedorID
+	LEFT JOIN Medicamento_Encomenda me ON e.encomendaID = me.EncomendaencomendaID
+	LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
+	ORDER BY e.dataEncomenda DESC;
   `;
 
   try {
