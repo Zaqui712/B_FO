@@ -12,14 +12,15 @@ router.use(cors({
 
 // READ - Route to check all orders and their details
 router.get('/all', async (req, res) => {
-  const query = `
+  // First query to get order details
+  const orderQuery = `
     SELECT 
       e.encomendaSHID AS OrderSHID,
       e.dataEncomenda,
       e.dataEntrega,
       e.encomendaCompleta,
       e.aprovadoPorAdministrador,
-      es.estadoID AS estadoID,  -- Include estadoID here without descricao
+      es.estadoID,  -- Include estadoID here without descricao
       f.nomeFornecedor,
       f.contactoFornecedor,
       m.nomeMedicamento,
@@ -31,12 +32,35 @@ router.get('/all', async (req, res) => {
     LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
     ORDER BY e.dataEncomenda DESC;
   `;
-
+  
+  // Second query to get details from Medicamento_Encomenda, excluding EncomendaencomendaID
+  const medicamentoQuery = `
+    SELECT
+      me.MedicamentomedicamentoID,
+      m.nomeMedicamento
+    FROM Medicamento_Encomenda me
+    LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
+    ORDER BY me.EncomendaencomendaID;
+  `;
+  
   try {
-    const results = await executeQuery(query);  // Execute the query using the executeQuery function
-    res.status(200).json(results.recordset);  // Return the results as JSON
+    // Run both queries concurrently
+    const [orderResults, medicamentoResults] = await Promise.all([
+      executeQuery(orderQuery),  // First query: Order details
+      executeQuery(medicamentoQuery)  // Second query: Medicamento details
+    ]);
+    
+    // Combine both results into one object
+    const combinedResults = {
+      orders: orderResults.recordset,
+      medicamentos: medicamentoResults.recordset
+    };
+    
+    // Send combined results as a JSON response
+    res.status(200).json(combinedResults);  
+    
   } catch (error) {
-    console.error('Error fetching orders:', error.message);  // Log the error message
+    console.error('Error fetching data:', error.message);  // Log the error message
     res.status(500).json({ error: error.message });  // Return the error as JSON
   }
 });
