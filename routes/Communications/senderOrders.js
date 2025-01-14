@@ -26,7 +26,7 @@ router.put('/', async (req, res) => {
   console.log('Updating and sending encomenda:', encomenda);
 
   // Validate required fields
-  if (!encomenda || encomenda.encomendaCompleta == null || !encomenda.dataEntrega || !encomenda.encomendaSHID) {
+  if (!encomenda || encomenda.encomendaCompleta == null || !encomenda.dataEntrega || !encomenda.encomendaID) {
     console.log('Missing required fields in encomenda');
     return res.status(400).json({ message: 'Missing required fields for updating order' });
   }
@@ -39,25 +39,22 @@ router.put('/', async (req, res) => {
 
     await transaction.begin();
 
-    // Ensure the value of encomendaCompleta is passed as a boolean (1 for true, 0 for false)
-    const encomendaCompletaValue = encomenda.encomendaCompleta ? 1 : 0;  // Use 1 for true and 0 for false
-
-    // Update encomenda query - only updating encomendaCompleta and dataEntrega using encomendaSHID
-    const updateEncomendaQuery = `
+    // Update encomenda query - only updating encomendaCompleta and dataEntrega
+    const updateEncomendaQuery = 
       UPDATE Encomenda
       SET encomendaCompleta = @encomendaCompleta, 
           dataEntrega = @dataEntrega
-      WHERE encomendaSHID = @encomendaSHID AND encomendaCompleta IS NULL
-    `;
+      WHERE encomendaID = @encomendaID
+    ;
 
     // Execute update query
     await transaction.request()
-      .input('encomendaCompleta', sql.Bit, encomendaCompletaValue)  // Ensure Bit type
+      .input('encomendaCompleta', sql.Bit, encomenda.encomendaCompleta)
       .input('dataEntrega', sql.Date, encomenda.dataEntrega)  // Use dataEntrega here
-      .input('encomendaSHID', sql.Int, encomenda.encomendaSHID)  // Correct encomendaSHID type
+      .input('encomendaID', sql.Int, encomenda.encomendaID)
       .query(updateEncomendaQuery);
 
-    console.log('Encomenda updated locally:', encomenda.encomendaSHID);
+    console.log('Encomenda updated locally:', encomenda.encomendaID);
 
     // Commit the transaction
     await transaction.commit();
@@ -66,33 +63,34 @@ router.put('/', async (req, res) => {
 
     // Prepare data for external backend
     const encomendaToSend = {
-      encomendaSHID: encomenda.encomendaSHID,  // Correctly send encomendaSHID for the external backend
-      dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
-      encomendaCompleta: encomenda.encomendaCompleta,
-    };
+	  encomendaSHID: encomenda.encomendaID,  // Correctly send encomendaID as encomendaSHID for the external backend
+	  dataEntrega: encomenda.dataEntrega,    // Ensure it's in the correct format (YYYY-MM-DD)
+	  encomendaCompleta: encomenda.encomendaCompleta,
+	};
+	
+    delete encomendaToSend.encomendaID;  // Optional: Remove original encomendaID to avoid confusion
 
     // Send encomenda data to external backend
     try {
-      const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
-      console.log('Encomenda sent to external backend:', response.data);
-    } catch (error) {
-      console.error('Error sending encomenda to external backend:', error.message);
-      // Log the response details for debugging
-      if (error.response) {
-        console.error('Response from external backend:', error.response.data);
-        console.error('Status code:', error.response.status);
-      }
-    }
-
+	  const response = await axios.post('http://4.211.87.132:5000/api/receive/', { encomenda: encomendaToSend });
+	  console.log('Encomenda sent to external backend:', response.data);
+	} catch (error) {
+	  console.error('Error sending encomenda to external backend:', error.message);
+	  // Log the response details for debugging
+	  if (error.response) {
+		console.error('Response from external backend:', error.response.data);
+		console.error('Status code:', error.response.status);
+	  }
+	}
+	
     // Success response
-    res.status(200).json({ message: 'Encomenda updated and sent successfully', encomendaSHID: encomenda.encomendaSHID });
+    res.status(200).json({ message: 'Encomenda updated and sent successfully', encomendaID: encomenda.encomendaID });
   } catch (error) {
     console.error('Error updating encomenda:', error.message);
     if (transaction) await transaction.rollback();
     res.status(500).json({ error: 'Error updating encomenda', details: error.message });
   }
 });
-
 
 /*
 // Order Automatically Sent (every 2 minutes) - Modified to send only incomplete encomendas
@@ -104,11 +102,11 @@ router.put('/auto', async (req, res) => {
     try {
       // Query for all incomplete encomendas (encomendaCompleta = 0)
       const pool = await getPool();
-      const query = `
+      const query = 
         SELECT * FROM Encomenda
         WHERE encomendaCompleta = 0  -- Only select incomplete orders
         ORDER BY dataEncomenda
-      `;
+      ;
 
       const result = await pool.request().query(query);
       const encomendas = result.recordset;
@@ -118,7 +116,7 @@ router.put('/auto', async (req, res) => {
         return;
       }
 
-      console.log(`Found ${encomendas.length} encomendas to send`);
+      console.log(Found ${encomendas.length} encomendas to send);
 
       for (const encomenda of encomendas) {
         console.log('Automatically sending encomenda:', encomenda.encomendaID);
@@ -146,11 +144,11 @@ router.put('/auto', async (req, res) => {
         // Optionally update the status of the encomenda as completed after sending
         await pool.request()
           .input('encomendaID', sql.Int, encomenda.encomendaID)
-          .query(`
+          .query(
             UPDATE Encomenda
             SET encomendaCompleta = 1  -- Mark the order as completed after sending
             WHERE encomendaID = @encomendaID
-          `);
+          );
       }
 
     } catch (error) {
