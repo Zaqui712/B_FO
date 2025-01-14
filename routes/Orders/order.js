@@ -36,9 +36,11 @@ router.get('/all', async (req, res) => {
   // Second query to get details from Medicamento_Encomenda, excluding EncomendaencomendaID
   const medicamentoQuery = `
     SELECT
+      me.EncomendaencomendaID,
       me.MedicamentomedicamentoID,
       m.nomeMedicamento
     FROM Medicamento_Encomenda me
+    LEFT JOIN Encomenda e ON me.EncomendaencomendaID = e.encomendaID
     LEFT JOIN Medicamento m ON me.MedicamentomedicamentoID = m.medicamentoID
     ORDER BY me.EncomendaencomendaID;
   `;
